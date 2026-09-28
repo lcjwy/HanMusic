@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:han_music/app/core/constants/app_constants.dart';
+import 'package:han_music/app/core/exceptions/app_exception.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/data/models/song.dart';
@@ -18,10 +19,17 @@ import 'package:just_audio_background/just_audio_background.dart';
 /// [PlayQueueManager] 纯逻辑驱动；just_audio_background 负责通知栏与
 /// 系统媒体中心的控制集成。
 class PlayerService extends GetxService {
-  PlayerService(this._store, this._settings);
+  PlayerService(
+    this._store,
+    this._settings, {
+    Future<String> Function(Song song)? urlResolver,
+  })  : _urlResolver = urlResolver;
 
   final KeyValueStore _store;
   final SettingsService _settings;
+
+  /// 在线歌曲播放地址解析器（由 OnlineSourceService 提供）。
+  final Future<String> Function(Song song)? _urlResolver;
 
   late final AudioPlayer _player;
   final _subscriptions = <StreamSubscription<dynamic>>[];
@@ -115,22 +123,43 @@ class PlayerService extends GetxService {
   }
 
   Future<void> _loadAndPlay(Song song, {Duration? startAt}) async {
-    final uri = song.source == SongSource.local
-        ? Uri.file(song.pathOrUrl)
-        : Uri.tryParse(song.pathOrUrl) ?? Uri();
-    final source = AudioSource.uri(uri, tag: _mediaItem(song));
     try {
+      final playable = await _ensurePlayable(song);
+      final uri = playable.source == SongSource.local
+          ? Uri.file(playable.pathOrUrl)
+          : Uri.tryParse(playable.pathOrUrl) ?? Uri();
+      final source = AudioSource.uri(uri, tag: _mediaItem(playable));
       buffering.value = true;
       await _player.setAudioSource(source, initialPosition: startAt);
-      _loadedSongId = song.id;
+      _loadedSongId = playable.id;
       _consecutiveFailures = 0;
       await _player.play();
+    } on AppException catch (e) {
+      buffering.value = false;
+      _consecutiveFailures++;
+      lastError.value = e.message;
+      await _skipOnFailure();
     } on Exception catch (e) {
       buffering.value = false;
       _consecutiveFailures++;
       _reportError('无法播放「${song.title}」', e);
       await _skipOnFailure();
     }
+  }
+
+  /// 在线歌曲且地址未解析时经 resolver 获取，解析结果回写队列缓存。
+  Future<Song> _ensurePlayable(Song song) async {
+    if (song.source != SongSource.online ||
+        song.pathOrUrl.isNotEmpty ||
+        _urlResolver == null) {
+      return song;
+    }
+    final url = await _urlResolver(song);
+    final resolved = song.copyWith(pathOrUrl: url);
+    final index = queue.indexOf(song);
+    if (index >= 0) queue[index] = resolved;
+    if (current.value?.id == song.id) current.value = resolved;
+    return resolved;
   }
 
   /// 播放失败自动跳过（设置可关）：顺序跳下一曲，整轮失败则停下。

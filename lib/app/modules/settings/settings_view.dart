@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
+import 'package:han_music/app/modules/settings/source_config_dialog.dart';
 import 'package:han_music/app/services/settings_service.dart';
 
 /// 设置页：外观 / 网络源 / 数据管理 / 关于。
@@ -54,7 +55,7 @@ class SettingsView extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Get.snackbar('提示', '网络源配置即将就绪'),
+              onTap: () => showSourceConfigDialog(context),
             );
           },
         ),

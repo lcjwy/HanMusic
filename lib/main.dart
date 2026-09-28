@@ -8,6 +8,7 @@ import 'package:han_music/app/core/theme/app_theme.dart';
 import 'app/routes/app_pages.dart';
 import 'app/services/library_import_service.dart';
 import 'app/services/library_service.dart';
+import 'app/services/online_source_service.dart';
 import 'app/services/player_service.dart';
 import 'app/services/settings_service.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -25,7 +26,11 @@ Future<void> main() async {
   final library = Get.put(LibraryService(store), permanent: true);
   await library.load();
   Get.put(LibraryImportService(library), permanent: true);
-  final player = Get.put(PlayerService(store, settings), permanent: true);
+  final onlineSource = Get.put(OnlineSourceService(), permanent: true);
+  final player = Get.put(
+    PlayerService(store, settings, urlResolver: onlineSource.resolveForPlayer),
+    permanent: true,
+  );
   await player.init();
 
   if (backgroundAudioSupported) {
