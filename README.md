@@ -1,17 +1,41 @@
-# han_music
+# HanMusic
 
-Han music Flutter project.
+基于 **Flutter + GetX（MVVM）** 的跨平台音乐播放器：本地曲库管理、自定义网络源串流播放、睡眠定时。一次编写，覆盖 Android / iOS / Windows / macOS / Linux / Web 六端。
 
-## Getting Started
+## 文档
 
-This project is a starting point for a Flutter application.
+| 文档 | 内容 |
+|---|---|
+| [doc/01-技术架构要求.md](doc/01-技术架构要求.md) | MVVM 分层、依赖选型与准入规则、目录结构约定、关键技术方案 |
+| [doc/02-需求文档.md](doc/02-需求文档.md) | 项目背景、平台范围、功能需求总览（F1–F10）、版本规划与风险 |
+| [doc/03-功能说明文档.md](doc/03-功能说明文档.md) | 各功能模块的交互流程、边界规则、异常处理与验收清单 |
 
-A few resources to get you started if this is your first Flutter project:
+## 功能（MVP v0.1）
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **F1 本地音乐库**：文件/文件夹导入，读取标签与内嵌封面（文件名兜底），搜索、排序、多选管理
+- **F2 网络音乐源**：配置自己的音乐 API（接口路径 + 字段映射），在线搜索与串流播放
+- **F3 播放器核心**：四种播放模式、队列管理、后台播放与通知栏/锁屏控制、上次播放恢复
+- **F4 睡眠定时**：预设/自定义倒计时、"播完当前歌曲后停止"、顺延
+- **F8 多端适配**：桌面端 media_kit 播放后端，移动端后台音频，平台差异收敛在适配层
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 技术栈
+
+Flutter (stable) · GetX（状态/路由/依赖注入）· just_audio + just_audio_background · audio_session · file_picker · get_storage · http · audio_metadata_reader · just_audio_media_kit
+
+依赖引入遵循极简与准入规则，见[架构文档选型表](doc/01-技术架构要求.md)。
+
+## 开发
+
+```bash
+flutter pub get
+flutter analyze   # 零警告
+flutter test      # 单元测试
+flutter run       # 按所选设备运行
+```
+
+Windows 桌面端构建需系统开启开发者模式（插件 symlink 依赖）：`设置 → 系统 → 开发者选项`。
+
+## 分支
+
+- `main`：文档与基线
+- `dev`：日常开发（当前 MVP 实现所在分支）
