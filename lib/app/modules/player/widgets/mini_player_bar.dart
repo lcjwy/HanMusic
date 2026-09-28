@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_routes.dart';
+import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/modules/player/player_controller.dart';
 import 'package:han_music/app/services/player_service.dart';
+import 'package:han_music/app/services/timer_service.dart';
 
 /// 全局迷你播放条：除播放页外的所有页面常驻底部。
 class MiniPlayerBar extends StatelessWidget {
@@ -37,6 +39,19 @@ class MiniPlayerBar extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Obx(() {
+                final remaining = Get.find<TimerService>().remaining.value;
+                if (remaining == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    formatDuration(remaining),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                );
+              }),
               Obx(
                 () => IconButton(
                   tooltip: player.playing.value ? '暂停' : '播放',

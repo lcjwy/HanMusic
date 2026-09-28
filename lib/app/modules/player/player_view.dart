@@ -5,7 +5,9 @@ import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/modules/player/player_controller.dart';
+import 'package:han_music/app/modules/player/widgets/sleep_timer_sheet.dart';
 import 'package:han_music/app/services/player_service.dart';
+import 'package:han_music/app/services/timer_service.dart';
 
 /// 播放页：封面、进度、播放控制、播放模式、音量、定时入口。
 class PlayerView extends StatelessWidget {
@@ -87,11 +89,20 @@ class PlayerView extends StatelessWidget {
                       onPressed: controller.next,
                       icon: const Icon(Icons.skip_next),
                     ),
-                    IconButton(
-                      tooltip: '睡眠定时',
-                      icon: const Icon(Icons.timer_outlined),
-                      onPressed: () => Get.snackbar('提示', '睡眠定时即将就绪'),
-                    ),
+                    Obx(() {
+                      final timer = Get.find<TimerService>();
+                      final timerActive = timer.active;
+                      return IconButton(
+                        tooltip: '睡眠定时',
+                        icon: Icon(
+                          timerActive ? Icons.timer : Icons.timer_outlined,
+                          color: timerActive
+                              ? theme.colorScheme.primary
+                              : null,
+                        ),
+                        onPressed: () => showSleepTimerSheet(context),
+                      );
+                    }),
                   ],
                 ),
                 const SizedBox(height: 8),

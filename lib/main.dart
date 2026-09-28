@@ -11,6 +11,7 @@ import 'app/services/library_service.dart';
 import 'app/services/online_source_service.dart';
 import 'app/services/player_service.dart';
 import 'app/services/settings_service.dart';
+import 'app/services/timer_service.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 Future<void> main() async {
@@ -32,6 +33,8 @@ Future<void> main() async {
     permanent: true,
   );
   await player.init();
+  final timer = Get.put(TimerService(onPause: player.pause), permanent: true);
+  player.stopAfterCurrentHook = timer.consumeStopAfterCurrent;
 
   if (backgroundAudioSupported) {
     await JustAudioBackground.init(

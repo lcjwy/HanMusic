@@ -54,6 +54,10 @@ class PlayerService extends GetxService {
   /// 恢复播放使用的记忆进度。
   Duration? _resumePosition;
 
+  /// "播完当前歌曲后停止"钩子（由定时服务注入）：返回 true 时播完不再
+  /// 自动切歌。与 TimerService 保持单向依赖，避免服务互相引用。
+  bool Function()? stopAfterCurrentHook;
+
   /// 连续失败计数：一轮队列内全部失败则停止自动跳过，避免死循环。
   int _consecutiveFailures = 0;
 
@@ -91,6 +95,13 @@ class PlayerService extends GetxService {
     buffering.value = state.processingState == ProcessingState.loading ||
         state.processingState == ProcessingState.buffering;
     if (state.processingState == ProcessingState.completed) {
+      final hook = stopAfterCurrentHook;
+      if (hook != null && hook()) {
+        // 睡眠定时"播完当前歌曲后停止"：到点暂停，不切歌
+        _resumePosition = _player.position;
+        _persistState();
+        return;
+      }
       final next = PlayQueueManager.nextAfterComplete(
         mode: playMode.value,
         current: currentIndex.value,
