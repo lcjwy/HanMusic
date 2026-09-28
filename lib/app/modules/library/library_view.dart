@@ -4,9 +4,10 @@ import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/modules/library/library_controller.dart';
+import 'package:han_music/app/services/library_import_service.dart';
 import 'package:han_music/app/services/library_service.dart';
 
-/// 本地音乐库页：搜索 + 排序 + 虚拟化列表。
+/// 本地音乐库页：搜索 + 排序 + 虚拟化列表 + 导入 + 多选删除。
 class LibraryView extends StatelessWidget {
   const LibraryView({super.key});
 
@@ -17,19 +18,24 @@ class LibraryView extends StatelessWidget {
 
     return Column(
       children: [
-        _Toolbar(controller: controller),
+        Obx(() {
+          library.songs.length; // 订阅曲库变化以刷新空态
+          return controller.selecting
+              ? _SelectionBar(controller: controller)
+              : _Toolbar(controller: controller);
+        }),
+        const _ImportProgress(),
         Expanded(
           child: Obx(() {
-            // 显式订阅曲库变化；查询与排序在 visibleSongs 内同步读取
             library.songs.length;
             final songs = controller.visibleSongs();
             if (library.songs.isEmpty) {
-              return const EmptyPlaceholder(
+              return EmptyPlaceholder(
                 icon: Icons.library_music,
                 title: '本地曲库还是空的',
                 subtitle: '导入本地音频文件，开始你的音乐',
                 actionLabel: '导入音乐',
-                onAction: _stubImport,
+                onAction: controller.importFiles,
               );
             }
             if (songs.isEmpty) {
@@ -42,27 +48,39 @@ class LibraryView extends StatelessWidget {
               itemCount: songs.length,
               itemBuilder: (context, index) {
                 final song = songs[index];
-                return ListTile(
-                  leading: CoverArt(url: song.coverUrl, size: 44, iconSize: 20),
-                  title: Text(
-                    song.missing ? '${song.title}（文件缺失）' : song.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: song.missing
-                        ? TextStyle(color: Theme.of(context).disabledColor)
-                        : null,
-                  ),
-                  subtitle: Text(
-                    '${song.artist} - ${song.album}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: Text(
-                    formatDuration(song.duration),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  onTap: () => controller.playVisible(index),
-                );
+                return Obx(() {
+                  final checked = controller.selected.contains(song);
+                  return ListTile(
+                    leading: controller.selecting
+                        ? Checkbox(
+                            value: checked,
+                            onChanged: (_) => controller.toggleSelected(song),
+                          )
+                        : CoverArt(url: song.coverUrl, size: 44, iconSize: 20),
+                    title: Text(
+                      song.missing ? '${song.title}（文件缺失）' : song.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: song.missing
+                          ? TextStyle(color: Theme.of(context).disabledColor)
+                          : null,
+                    ),
+                    subtitle: Text(
+                      '${song.artist} - ${song.album}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Text(
+                      formatDuration(song.duration),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    selected: checked,
+                    onTap: () => controller.selecting
+                        ? controller.toggleSelected(song)
+                        : controller.playVisible(index),
+                    onLongPress: () => controller.toggleSelected(song),
+                  );
+                });
               },
             );
           }),
@@ -103,10 +121,15 @@ class _Toolbar extends StatelessWidget {
                 PopupMenuItem(value: sort, child: Text(sort.label)),
             ],
           ),
-          IconButton(
-            tooltip: '导入音乐',
+          PopupMenuButton<String>(
             icon: const Icon(Icons.playlist_add),
-            onPressed: _stubImport,
+            tooltip: '导入音乐',
+            onSelected: (value) =>
+                value == 'files' ? controller.importFiles() : controller.importFolder(),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'files', child: Text('导入文件')),
+              PopupMenuItem(value: 'folder', child: Text('导入文件夹')),
+            ],
           ),
         ],
       ),
@@ -114,6 +137,123 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-void _stubImport() {
-  Get.snackbar('提示', '导入功能即将就绪');
+/// 多选模式顶栏：全选 / 删除 / 退出。
+class _SelectionBar extends StatelessWidget {
+  const _SelectionBar({required this.controller});
+
+  final LibraryController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(
+      () => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Row(
+          children: [
+            Text(
+              '已选 ${controller.selected.length} 项',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () {
+                if (controller.selected.length < controller.visibleSongs().length) {
+                  controller.selected.addAll(controller.visibleSongs());
+                } else {
+                  controller.clearSelection();
+                }
+              },
+              child: Text(
+                controller.selected.length < controller.visibleSongs().length
+                    ? '全选'
+                    : '取消全选',
+              ),
+            ),
+            IconButton(
+              tooltip: '移除所选',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: controller.selected.isEmpty
+                  ? null
+                  : () => _confirmRemove(context, controller),
+            ),
+            IconButton(
+              tooltip: '退出选择',
+              icon: const Icon(Icons.close),
+              onPressed: controller.clearSelection,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemove(
+    BuildContext context,
+    LibraryController controller,
+  ) async {
+    final count = controller.selected.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('移除所选歌曲'),
+        content: Text('将从曲库索引移除 $count 首歌曲（不删除源文件），确定继续？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('移除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await controller.removeSelected();
+    }
+  }
+}
+
+/// 导入进度条：任务进行中显示在工具栏下方，可取消。
+class _ImportProgress extends StatelessWidget {
+  const _ImportProgress();
+
+  @override
+  Widget build(BuildContext context) {
+    final importer = Get.find<LibraryImportService>();
+    return Obx(() {
+      if (!importer.importing.value) return const SizedBox.shrink();
+      final total = importer.total.value;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '正在导入 ${importer.scanned.value}/$total：${importer.currentName.value}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  LinearProgressIndicator(
+                    value: total > 0 ? importer.scanned.value / total : null,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: '取消导入',
+              icon: const Icon(Icons.close),
+              onPressed: importer.cancel,
+            ),
+          ],
+        ),
+      );
+    });
+  }
 }

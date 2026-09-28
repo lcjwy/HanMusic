@@ -6,6 +6,7 @@ import 'package:han_music/app/core/platform/player_backend.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
 import 'package:han_music/app/core/theme/app_theme.dart';
 import 'app/routes/app_pages.dart';
+import 'app/services/library_import_service.dart';
 import 'app/services/library_service.dart';
 import 'app/services/player_service.dart';
 import 'app/services/settings_service.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
   await settings.load();
   final library = Get.put(LibraryService(store), permanent: true);
   await library.load();
+  Get.put(LibraryImportService(library), permanent: true);
   final player = Get.put(PlayerService(store, settings), permanent: true);
   await player.init();
 
