@@ -1,5 +1,6 @@
 package com.han.music.han_music
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+/// 继承 AudioServiceActivity：just_audio_background 前台服务与媒体控制所需。
+class MainActivity : AudioServiceActivity()

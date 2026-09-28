@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_constants.dart';
+import 'package:han_music/app/core/io/local_file.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
 import 'package:han_music/app/data/models/song.dart';
 
@@ -11,7 +11,7 @@ import 'package:han_music/app/data/models/song.dart';
 /// 只管理索引，不触碰源文件本身。
 class LibraryService extends GetxService {
   LibraryService(this._store, {bool Function(String path)? fileExists})
-      : _fileExists = fileExists ?? ((path) => File(path).existsSync());
+      : _fileExists = fileExists ?? localFileExists;
 
   final KeyValueStore _store;
   final bool Function(String path) _fileExists;

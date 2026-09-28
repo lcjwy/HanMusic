@@ -4,6 +4,7 @@ abstract final class AppConstants {
   static const storageContainer = 'han_music';
   static const keySettings = 'settings';
   static const keyLibrary = 'library_index';
+  static const keyPlayerState = 'player_state';
 
   // ---- 后台播放（just_audio_background）----
   static const notificationChannelId = 'com.han.music.han_music.playback';
