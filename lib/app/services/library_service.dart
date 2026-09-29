@@ -38,12 +38,19 @@ class LibraryService extends GetxService {
   bool containsPath(String path) =>
       songs.any((s) => s.source == SongSource.local && s.pathOrUrl == path);
 
-  /// 批量导入，按本地路径去重，返回实际新增数量。
-  int addAll(Iterable<Song> incoming) {
-    final fresh = incoming.where((s) => !containsPath(s.pathOrUrl)).toList();
+  /// 批量导入，按歌曲 id（本地即路径哈希）去重——含批内重复与已入库重复，
+  /// 返回实际新增数量。
+  Future<int> addAll(Iterable<Song> incoming) async {
+    final known = songs.map((s) => s.id).toSet();
+    final fresh = <Song>[];
+    for (final song in incoming) {
+      if (known.add(song.id)) {
+        fresh.add(song);
+      }
+    }
     if (fresh.isNotEmpty) {
       songs.addAll(fresh);
-      _persist();
+      await _persist();
     }
     return fresh.length;
   }

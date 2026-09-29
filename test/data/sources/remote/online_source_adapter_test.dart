@@ -61,8 +61,7 @@ void main() {
       expect(songs.last.artist, Song.defaultArtist);
     });
 
-    test('点路径取嵌套列表与字段', () async {
-      final client = MockClient(
+    test('点路径取嵌套列表与字段', () async {      final client = MockClient(
         (request) async => jsonResponse({
           'data': {
             'songs': [
@@ -82,6 +81,16 @@ void main() {
 
       expect(songs.single.id, 'online-abc');
       expect(songs.single.title, '稻香');
+    });
+
+    test('baseUrl 带尾斜杠时归一化，不产生双斜杠路径', () async {
+      final client = MockClient((request) async {
+        expect(request.url.host, 'src.example');
+        expect(request.url.path, '/api/search');
+        return jsonResponse({'result': []});
+      });
+      const config = OnlineSourceConfig(baseUrl: 'https://src.example/api/');
+      await adapterWith(client, config: config).search('x');
     });
 
     test('无 id 的结果被跳过', () async {

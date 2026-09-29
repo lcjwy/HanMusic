@@ -145,34 +145,32 @@ class _SelectionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => Padding(
+    return Obx(() {
+      // 一次重建内只计算一次可见列表，避免条件与动作间状态漂移
+      final visible = controller.visibleSongs();
+      final selectedCount = controller.selected.length;
+      final allSelected = visible.isNotEmpty && selectedCount >= visible.length;
+      return Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
         child: Row(
           children: [
             Text(
-              '已选 ${controller.selected.length} 项',
+              '已选 $selectedCount 项',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const Spacer(),
             TextButton(
-              onPressed: () {
-                if (controller.selected.length < controller.visibleSongs().length) {
-                  controller.selected.addAll(controller.visibleSongs());
-                } else {
-                  controller.clearSelection();
-                }
-              },
-              child: Text(
-                controller.selected.length < controller.visibleSongs().length
-                    ? '全选'
-                    : '取消全选',
-              ),
+              onPressed: visible.isEmpty
+                  ? null
+                  : () => allSelected
+                      ? controller.clearSelection()
+                      : controller.selected.addAll(visible),
+              child: Text(allSelected ? '取消全选' : '全选'),
             ),
             IconButton(
               tooltip: '移除所选',
               icon: const Icon(Icons.delete_outline),
-              onPressed: controller.selected.isEmpty
+              onPressed: selectedCount == 0
                   ? null
                   : () => _confirmRemove(context, controller),
             ),
@@ -183,8 +181,8 @@ class _SelectionBar extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _confirmRemove(

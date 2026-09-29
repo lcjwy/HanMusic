@@ -76,9 +76,12 @@ class OnlineSourceAdapter {
   }
 
   Uri _uri(String path, Map<String, String> query) {
+    // baseUrl 容错：用户配置带尾斜杠时归一化，避免出现双斜杠路径
+    final base = config.baseUrl.endsWith('/')
+        ? config.baseUrl.substring(0, config.baseUrl.length - 1)
+        : config.baseUrl;
     final normalized = path.startsWith('/') ? path : '/$path';
-    return Uri.parse('${config.baseUrl}$normalized')
-        .replace(queryParameters: query);
+    return Uri.parse('$base$normalized').replace(queryParameters: query);
   }
 
   void _ensureOk(http.Response response) {

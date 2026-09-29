@@ -5,13 +5,38 @@ import 'package:han_music/app/services/timer_service.dart';
 
 /// 睡眠定时面板：预设时长 / 自定义 / 播完当前歌曲后停止；活跃任务可顺延与取消。
 Future<void> showSleepTimerSheet(BuildContext context) {
-  final timer = Get.find<TimerService>();
-  final customController = TextEditingController();
-
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => Padding(
+    builder: (_) => const _SleepTimerSheet(),
+  );
+}
+
+class _SleepTimerSheet extends StatefulWidget {
+  const _SleepTimerSheet();
+
+  @override
+  State<_SleepTimerSheet> createState() => _SleepTimerSheetState();
+}
+
+class _SleepTimerSheetState extends State<_SleepTimerSheet> {
+  final _customMinutesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _customMinutesController.dispose();
+    super.dispose();
+  }
+
+  void _startMinutes(int minutes) {
+    Get.find<TimerService>().startMinutes(minutes);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final timer = Get.find<TimerService>();
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Obx(() {
         final active = timer.active;
@@ -20,10 +45,7 @@ Future<void> showSleepTimerSheet(BuildContext context) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                '睡眠定时',
-                style: Theme.of(sheetContext).textTheme.titleSmall,
-              ),
+              Text('睡眠定时', style: Theme.of(context).textTheme.titleSmall),
               if (active) ...[
                 const SizedBox(height: 12),
                 _ActiveTaskRow(timer: timer),
@@ -37,16 +59,13 @@ Future<void> showSleepTimerSheet(BuildContext context) {
                   for (final minutes in TimerService.presetMinutes)
                     ActionChip(
                       label: Text('$minutes 分钟'),
-                      onPressed: () {
-                        timer.startMinutes(minutes);
-                        Navigator.of(sheetContext).pop();
-                      },
+                      onPressed: () => _startMinutes(minutes),
                     ),
                   ActionChip(
                     label: const Text('播完当前歌曲'),
                     onPressed: () {
                       timer.startStopAfterCurrent();
-                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).pop();
                     },
                   ),
                 ],
@@ -56,7 +75,7 @@ Future<void> showSleepTimerSheet(BuildContext context) {
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: customController,
+                      controller: _customMinutesController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: '自定义（分钟）',
@@ -67,15 +86,7 @@ Future<void> showSleepTimerSheet(BuildContext context) {
                   ),
                   const SizedBox(width: 8),
                   FilledButton.tonal(
-                    onPressed: () {
-                      final minutes = int.tryParse(customController.text.trim());
-                      if (minutes == null || minutes <= 0) {
-                        Get.snackbar('无法启动', '请输入有效的分钟数');
-                        return;
-                      }
-                      timer.startMinutes(minutes);
-                      Navigator.of(sheetContext).pop();
-                    },
+                    onPressed: _submitCustomMinutes,
                     child: const Text('启动'),
                   ),
                 ],
@@ -83,16 +94,25 @@ Future<void> showSleepTimerSheet(BuildContext context) {
               const SizedBox(height: 8),
               Text(
                 '到点后自动暂停播放；应用被系统结束后定时将失效。',
-                style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(sheetContext).colorScheme.outline,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
                     ),
               ),
             ],
           ),
         );
       }),
-    ),
-  );
+    );
+  }
+
+  void _submitCustomMinutes() {
+    final minutes = int.tryParse(_customMinutesController.text.trim());
+    if (minutes == null || minutes <= 0) {
+      Get.snackbar('无法启动', '请输入有效的分钟数');
+      return;
+    }
+    _startMinutes(minutes);
+  }
 }
 
 class _ActiveTaskRow extends StatelessWidget {

@@ -34,7 +34,9 @@ class LibraryImportService extends GetxService {
   /// 请求取消当前导入任务（处理完当前文件后停止）。
   void cancel() => _cancelRequested = true;
 
-  Future<void> _run(List<String> paths) async {
+  Future<void> _run(List<String> rawPaths) async {
+    // 输入可能含重复路径（多选/目录扫描），先去重，保证计数与去重一致
+    final paths = rawPaths.toSet().toList();
     if (importing.value || paths.isEmpty) return;
     importing.value = true;
     _cancelRequested = false;
@@ -61,7 +63,7 @@ class LibraryImportService extends GetxService {
       }
     } finally {
       if (batch.isNotEmpty) {
-        _library.addAll(batch);
+        await _library.addAll(batch);
       }
       importing.value = false;
       currentName.value = '';

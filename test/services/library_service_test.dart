@@ -14,20 +14,28 @@ void main() {
     service = LibraryService(store, fileExists: (_) => true);
   });
 
-  test('批量导入按路径去重，返回新增数量', () {
-    final first = service.addAll([localSong('/m/a.mp3'), localSong('/m/b.mp3')]);
+  test('批量导入按路径去重，返回新增数量', () async {
+    final first = await service.addAll([localSong('/m/a.mp3'), localSong('/m/b.mp3')]);
     expect(first, 2);
     expect(service.songs.length, 2);
 
-    final second = service.addAll(
+    final second = await service.addAll(
       [localSong('/m/a.mp3'), localSong('/m/c.mp3')],
     );
     expect(second, 1);
     expect(service.songs.length, 3);
   });
 
+  test('导入输入含重复路径时去重', () async {
+    final added = await service.addAll(
+      [localSong('/m/a.mp3'), localSong('/m/a.mp3')],
+    );
+    expect(added, 1);
+    expect(service.songs.length, 1);
+  });
+
   test('removeSongs 仅移除索引，持久化生效', () async {
-    service.addAll([localSong('/m/a.mp3'), localSong('/m/b.mp3')]);
+    await service.addAll([localSong('/m/a.mp3'), localSong('/m/b.mp3')]);
     await service.removeSongs([localSong('/m/a.mp3')]);
     expect(service.songs.length, 1);
     expect(service.containsPath('/m/a.mp3'), isFalse);
@@ -35,7 +43,7 @@ void main() {
   });
 
   test('重启加载后对缺失文件标记 missing', () async {
-    service.addAll([localSong('/m/exists.mp3'), localSong('/m/gone.mp3')]);
+    await service.addAll([localSong('/m/exists.mp3'), localSong('/m/gone.mp3')]);
 
     final restored = LibraryService(
       store,
@@ -50,7 +58,7 @@ void main() {
   });
 
   test('clear 清空索引并持久化', () async {
-    service.addAll([localSong('/m/a.mp3')]);
+    await service.addAll([localSong('/m/a.mp3')]);
     await service.clear();
     expect(service.songs, isEmpty);
 

@@ -87,7 +87,7 @@ class PlayerService extends GetxService {
       ),
     ]);
 
-    _restore();
+    await _restore();
   }
 
   void _onPlayerState(PlayerState state) {
@@ -110,6 +110,8 @@ class PlayerService extends GetxService {
       if (next != null) {
         playAt(next);
       } else {
+        // 自然播完：暂停在队尾，避免"播完仍显示播放中"的状态不一致
+        _player.pause();
         _resumePosition = _player.position;
         _persistState();
       }
@@ -269,7 +271,7 @@ class PlayerService extends GetxService {
     await _player.setVolume(volume.value);
   }
 
-  void _restore() {
+  Future<void> _restore() async {
     final raw = _store.read<String>(AppConstants.keyPlayerState);
     if (raw == null || raw.isEmpty) return;
     try {
@@ -279,6 +281,8 @@ class PlayerService extends GetxService {
         orElse: () => PlayMode.sequential,
       );
       volume.value = ((json['volume'] as num?) ?? 1.0).clamp(0.0, 1.0).toDouble();
+      // 恢复的音量要真正应用到播放器，而不仅是 UI 状态
+      await _player.setVolume(volume.value);
       final list = (json['queue'] as List? ?? [])
           .cast<Map<String, dynamic>>()
           .map(Song.fromJson)
