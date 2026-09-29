@@ -43,6 +43,11 @@ void main() {
       expect(restored.missing, isFalse);
     });
 
+    test('时长字段为浮点数时也能解析', () {
+      final restored = Song.fromJson(const {'durationMs': 269000.0});
+      expect(restored.duration, const Duration(milliseconds: 269000));
+    });
+
     test('相等性仅由 id 决定', () {
       expect(song == song.copyWith(missing: true), isTrue);
       expect(song.hashCode, song.copyWith(missing: true).hashCode);

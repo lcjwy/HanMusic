@@ -46,6 +46,12 @@ class LibraryImportService extends GetxService {
     added.value = 0;
 
     final batch = <Song>[];
+    // 已入库本地路径快照：O(1) 判重，避免大曲库下逐条 containsPath 的 O(N×M) 扫描；
+    // Set.add 同时承担批内去重（新路径返回 true）
+    final existingPaths = _library.songs
+        .where((s) => s.source == SongSource.local)
+        .map((s) => s.pathOrUrl)
+        .toSet();
     try {
       for (final path in paths) {
         if (_cancelRequested) {
@@ -55,7 +61,7 @@ class LibraryImportService extends GetxService {
         currentName.value =
             Uri.file(path).pathSegments.where((s) => s.isNotEmpty).lastOrNull ??
                 path;
-        if (!_library.containsPath(path)) {
+        if (existingPaths.add(path)) {
           batch.add(await songFromFile(path));
           added.value += 1;
         }

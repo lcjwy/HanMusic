@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/core/utils/formatters.dart';
+import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/modules/library/library_controller.dart';
@@ -190,24 +191,13 @@ class _SelectionBar extends StatelessWidget {
     LibraryController controller,
   ) async {
     final count = controller.selected.length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('移除所选歌曲'),
-        content: Text('将从曲库索引移除 $count 首歌曲（不删除源文件），确定继续？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('移除'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '移除所选歌曲',
+      content: '将从曲库索引移除 $count 首歌曲（不删除源文件），确定继续？',
+      confirmLabel: '移除',
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await controller.removeSelected();
     }
   }

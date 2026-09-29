@@ -150,13 +150,14 @@ class PlayerService extends GetxService {
     } on AppException catch (e) {
       buffering.value = false;
       _consecutiveFailures++;
-      lastError.value = e.message;
-      await _skipOnFailure();
+      final skipped = await _skipOnFailure();
+      // 自动跳过链路中不逐曲弹错（避免刷屏），跳过结束后呈现最后一次错误
+      if (!skipped) lastError.value = e.message;
     } on Exception catch (e) {
       buffering.value = false;
       _consecutiveFailures++;
-      _reportError('无法播放「${song.title}」', e);
-      await _skipOnFailure();
+      final skipped = await _skipOnFailure();
+      if (!skipped) _reportError('无法播放「${song.title}」', e);
     }
   }
 
@@ -176,22 +177,24 @@ class PlayerService extends GetxService {
   }
 
   /// 播放失败自动跳过（设置可关）：顺序跳下一曲，整轮失败则停下。
-  Future<void> _skipOnFailure() async {
+  /// 返回是否已继续跳过；未跳过时由调用方负责呈现错误。
+  Future<bool> _skipOnFailure() async {
     if (!_settings.autoSkipOnFail.value ||
         queue.length <= 1 ||
         _consecutiveFailures >= queue.length) {
-      return;
+      return false;
     }
     final next = PlayQueueManager.nextAfterComplete(
       mode: PlayMode.sequential,
       current: currentIndex.value,
       length: queue.length,
     );
-    if (next == null || next == currentIndex.value) return;
+    if (next == null || next == currentIndex.value) return false;
     currentIndex.value = next;
     current.value = queue[next];
     await _persistState();
     await _loadAndPlay(queue[next]);
+    return true;
   }
 
   MediaItem _mediaItem(Song song) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
 import 'package:han_music/app/modules/settings/source_config_dialog.dart';
@@ -80,24 +81,13 @@ class SettingsView extends StatelessWidget {
     BuildContext context,
     SettingsController controller,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('清空曲库索引'),
-        content: const Text('将移除全部本地音乐索引（不删除源文件），确定继续？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('清空'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清空曲库索引',
+      content: '将移除全部本地音乐索引（不删除源文件），确定继续？',
+      confirmLabel: '清空',
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await controller.clearLibrary();
     }
   }

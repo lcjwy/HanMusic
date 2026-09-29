@@ -36,8 +36,11 @@ class OnlineSourceService extends GetxService {
     });
   }
 
-  /// 立即搜索；旧请求晚到不覆盖新结果，失败抛 [AppException]。
+  /// 立即搜索：取消待触发的防抖任务，避免同一关键词二次请求；
+  /// 旧请求晚到不覆盖新结果，失败抛 [AppException]。
   Future<void> search(String keyword) async {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
     final config = _requireConfig();
     final seq = ++_searchSeq;
     searching.value = true;

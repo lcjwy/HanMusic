@@ -109,8 +109,8 @@ class Song {
       title: json['title'] as String? ?? '未知标题',
       artist: json['artist'] as String? ?? defaultArtist,
       album: json['album'] as String? ?? defaultAlbum,
-      duration: json['durationMs'] is int
-          ? Duration(milliseconds: json['durationMs'] as int)
+      duration: json['durationMs'] is num
+          ? Duration(milliseconds: (json['durationMs'] as num).toInt())
           : null,
       coverUrl: json['coverUrl'] as String?,
       source: SongSource.values.firstWhere(

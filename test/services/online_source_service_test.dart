@@ -132,6 +132,34 @@ void main() {
     });
   });
 
+  test('手动 search 立即取消待触发的防抖任务，不产生重复请求', () {
+    fakeAsync((async) {
+      var adapterCreated = 0;
+      final settings = SettingsService(MemoryStore());
+      settings.source.value = _defaultConfig;
+      Get.put<SettingsService>(settings);
+      final service = OnlineSourceService(
+        adapterFactory: (config) {
+          adapterCreated++;
+          return OnlineSourceAdapter(
+            config,
+            client: MockClient(
+              (request) async => http.Response(
+                jsonEncode({'result': []}),
+                200,
+              ),
+            ),
+          );
+        },
+      );
+
+      service.searchDebounced('abc');
+      service.search('abc');
+      async.elapse(const Duration(seconds: 1));
+      expect(adapterCreated, 1, reason: '待触发的防抖计时器应被取消，仅手动搜索一次请求');
+    });
+  });
+
   test('空关键字防抖：清空结果且不发起请求', () {
     fakeAsync((async) {
       var adapterCreated = 0;
