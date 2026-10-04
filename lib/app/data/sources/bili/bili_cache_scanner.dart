@@ -67,9 +67,9 @@ BiliCacheEntry _parseEntry(Directory pageDir, File entryFile) {
     duration: durationValue is num && durationValue > 0
         ? Duration(seconds: durationValue.toInt())
         : null,
-    problem: audio == null
-        ? (json == null ? 'entry.json 解析失败' : '未找到 audio.m4s 音轨')
-        : null,
+    problem: json == null
+        ? 'entry.json 解析失败'
+        : (audio == null ? '未找到 audio.m4s 音轨' : null),
   );
 }
 
