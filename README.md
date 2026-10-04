@@ -35,6 +35,16 @@ flutter run       # 按所选设备运行
 
 Windows 桌面端构建需系统开启开发者模式（插件 symlink 依赖）：`设置 → 系统 → 开发者选项`。
 
+## 发布构建（Android）
+
+签名信息在 `android/key.properties`，密钥库为 `android/app/han_music.jks`（别名 `music110`），`release` 构建自动使用：
+
+```bash
+flutter build apk --release   # 产物：build/app/outputs/flutter-apk/app-release.apk
+```
+
+> 密钥库与口令按项目约定随仓库提交；若仓库转为公开或多人协作，应将两者移出版本管理并妥善保管（丢失无法再发布同签名更新）。
+
 ## 分支
 
 - `main`：文档与基线
