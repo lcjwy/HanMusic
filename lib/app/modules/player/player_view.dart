@@ -371,6 +371,7 @@ class _LyricsViewState extends State<_LyricsView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final controller = Get.find<PlayerController>();
     return NotificationListener<ScrollNotification>(
       onNotification: _onScrollNotification,
       child: Obx(() {
@@ -378,13 +379,25 @@ class _LyricsViewState extends State<_LyricsView> {
         final position = widget.player.position.value;
         if (doc == null || doc.lines.isEmpty) {
           return Center(
-            child: Text(
-              '暂无歌词',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.outline),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '暂无歌词',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.outline),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => controller.pasteLyrics(context),
+                  icon: const Icon(Icons.content_paste, size: 18),
+                  label: const Text('手动粘贴歌词'),
+                ),
+              ],
             ),
           );
         }
+        final showAiBadge = widget.player.lyricsFromAi.value;
         // 切歌（文档更换）：复位跟随状态，从头开始跟随
         final isNewDoc = !identical(doc, _lastDoc);
         if (isNewDoc) {
@@ -399,39 +412,82 @@ class _LyricsViewState extends State<_LyricsView> {
           if (isNewDoc && _scroll.hasClients) _scroll.jumpTo(0);
           _follow(current);
         });
-        return ListView.builder(
-          controller: _scroll,
-          padding: const EdgeInsets.symmetric(vertical: 120, horizontal: 8),
-          itemCount: doc.lines.length,
-          itemBuilder: (context, index) {
-            final line = doc.lines[index];
-            final isCurrent = index == current;
-            return GestureDetector(
-              onTap: line.timestamp == null
-                  ? null
-                  : () => widget.player.seek(line.timestamp!),
-              child: SizedBox(
-                height: _lineHeight,
-                child: Center(
-                  child: Text(
-                    line.text.isEmpty ? '♪' : line.text,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: (isCurrent
-                            ? theme.textTheme.titleMedium
-                            : theme.textTheme.bodyMedium)
-                        ?.copyWith(
-                      color: isCurrent
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outline,
-                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+        return Stack(
+          children: [
+            ListView.builder(
+              controller: _scroll,
+              padding: const EdgeInsets.symmetric(vertical: 120, horizontal: 8),
+              itemCount: doc.lines.length,
+              itemBuilder: (context, index) {
+                final line = doc.lines[index];
+                final isCurrent = index == current;
+                return GestureDetector(
+                  onTap: line.timestamp == null
+                      ? null
+                      : () => widget.player.seek(line.timestamp!),
+                  child: SizedBox(
+                    height: _lineHeight,
+                    child: Center(
+                      child: Text(
+                        line.text.isEmpty ? '♪' : line.text,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: (isCurrent
+                                ? theme.textTheme.titleMedium
+                                : theme.textTheme.bodyMedium)
+                            ?.copyWith(
+                          color: isCurrent
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.outline,
+                          fontWeight:
+                              isCurrent ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
                     ),
+                  ),
+                );
+              },
+            ),
+            if (showAiBadge)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI 生成',
+                        style: theme.textTheme.labelSmall,
+                      ),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: controller.refreshLyrics,
+                        child: Icon(
+                          Icons.refresh,
+                          size: 16,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
+          ],
         );
       }),
     );

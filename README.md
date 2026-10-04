@@ -25,10 +25,15 @@
 - **F5 歌单与收藏**：自建歌单增删改查、拖拽排序、整单/随机播放；内置 10 张渐变封面可选 + 自定义图片封面；内置「我喜欢的音乐」收藏歌单，播放页心形收藏、曲库多选/在线长按一键加入
 - **F11 歌词与播放动画**：播放页「专辑旋转动画 / 歌词滚动」一键切换；本地歌曲读内嵌歌词、在线歌曲经源配置歌词接口获取；LRC 自动跟随当前行、点击跳转进度、拖动挂起跟随；无歌词优雅占位
 - **界面体验**：主题色年轻化（紫罗兰种子色），暗色模式深灰背景不用纯黑；页面转场统一丝滑（280ms）
+- **F7 应用设置**：播放失败自动跳过开关；数据管理（占用展示、清空曲库/歌单/歌词缓存，逐项二次确认）；版本与开源许可页
+
+### v0.3（进行中）
+
+- **F10 AI 歌词服务**：阶跃星辰 / 智谱 / DeepSeek 三家 OpenAI 兼容接口，输入 Key + 选模型即用；歌词获取链路（缓存 → 内嵌 → 网络源 → AI）+ 本地缓存避免重复请求；播放页「AI 生成」标识、重新获取、手动粘贴优先；API Key 仅存系统安全区（Keystore/Keychain/DPAPI），禁止明文落盘
 
 ## 技术栈
 
-Flutter (stable) · GetX（状态/路由/依赖注入）· just_audio + just_audio_background · audio_session · file_picker · get_storage · http · audio_metadata_reader · just_audio_media_kit
+Flutter (stable) · GetX（状态/路由/依赖注入）· just_audio + just_audio_background · audio_session · file_picker · get_storage · flutter_secure_storage · http · audio_metadata_reader · just_audio_media_kit
 
 依赖引入遵循极简与准入规则，见[架构文档选型表](doc/01-技术架构要求.md)。
 

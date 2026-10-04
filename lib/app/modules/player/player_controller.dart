@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/modules/player/widgets/queue_sheet.dart';
+import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/player_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
 
@@ -62,4 +63,49 @@ class PlayerController extends GetxController {
 
   /// 切换「专辑动画 / 歌词滚动」两种内容视图。
   void toggleLyricsView() => showLyrics.value = !showLyrics.value;
+
+  /// 重新获取当前歌曲歌词（AI 结果可被覆盖，手动粘贴保留）。
+  Future<void> refreshLyrics() => player.refreshLyrics();
+
+  /// 手动粘贴歌词：优先级最高，永不被 AI 覆盖。
+  Future<void> pasteLyrics(BuildContext context) async {
+    final song = player.current.value;
+    if (song == null) return;
+    final text = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('粘贴歌词'),
+          content: SizedBox(
+            width: 420,
+            child: TextField(
+              controller: controller,
+              maxLines: 12,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: '粘贴 LRC 或纯文本歌词…',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text),
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+    if (text == null || text.trim().isEmpty) return;
+    await Get.find<LyricsService>().saveManual(song, text);
+    await player.refreshLyrics();
+    Get.snackbar('已保存', '手动粘贴的歌词将优先展示');
+  }
 }

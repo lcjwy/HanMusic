@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_constants.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
+import 'package:han_music/app/data/models/ai_settings.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 
-/// 全局设置：主题、网络源配置、播放失败自动跳过。变更即持久化。
+/// 全局设置：主题、网络源配置、播放失败自动跳过、AI 配置。变更即持久化。
+///
+/// AI 的 API Key 不在此存储——只经 SecretStore（系统安全区）按供应商存取。
 class SettingsService extends GetxService {
   SettingsService(this._store);
 
@@ -14,6 +17,7 @@ class SettingsService extends GetxService {
   final themeMode = AppThemeMode.system.obs;
   final source = Rxn<OnlineSourceConfig>();
   final autoSkipOnFail = true.obs;
+  final ai = Rxn<AiConfig>();
 
   bool get hasSource => source.value != null;
 
@@ -35,6 +39,7 @@ class SettingsService extends GetxService {
       autoSkipOnFail.value = json['autoSkipOnFail'] is bool
           ? json['autoSkipOnFail'] as bool
           : true;
+      ai.value = AiConfig.fromJson(json['ai']);
     } on FormatException {
       // 配置损坏时保持默认值
     } on TypeError {
@@ -57,11 +62,17 @@ class SettingsService extends GetxService {
     await _persist();
   }
 
+  Future<void> setAiConfig(AiConfig? config) async {
+    ai.value = config;
+    await _persist();
+  }
+
   Future<void> _persist() async {
     final json = {
       'themeMode': themeMode.value.name,
       'source': source.value?.toJson(),
       'autoSkipOnFail': autoSkipOnFail.value,
+      'ai': ai.value?.toJson(),
     };
     await _store.write(AppConstants.keySettings, jsonEncode(json));
   }

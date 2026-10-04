@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 import 'package:han_music/app/services/library_service.dart';
+import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
 import 'package:han_music/app/services/settings_service.dart';
 
@@ -23,5 +24,11 @@ class SettingsController extends GetxController {
   Future<void> clearPlaylists() async {
     await Get.find<PlaylistService>().clearAll();
     Get.snackbar('已完成', '歌单数据已清空');
+  }
+
+  /// 清空歌词缓存（AI/网络源获取的歌词将按需重新获取），调用前需 UI 二次确认。
+  Future<void> clearLyricsCache() async {
+    await Get.find<LyricsService>().clearCache();
+    Get.snackbar('已完成', '歌词缓存已清空');
   }
 }

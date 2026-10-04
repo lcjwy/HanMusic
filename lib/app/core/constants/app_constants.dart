@@ -28,6 +28,12 @@ abstract final class AppConstants {
   /// 在线搜索输入防抖时长。
   static const searchDebounce = Duration(milliseconds: 500);
 
+  // ---- AI（F10）----
+  /// AI 对话补全超时：歌词生成耗时高于普通请求，放宽到 60s。
+  static const aiRequestTimeout = Duration(seconds: 60);
+
+  /// 歌词本地缓存（键 = 曲名+歌手规范化），避免重复请求。
+  static const keyLyricsCache = 'lyrics_cache';
   // ---- 歌单 ----
   static const keyPlaylists = 'playlists';
   static const favoritePlaylistId = 'fav';

@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_constants.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
+import 'package:han_music/app/modules/settings/ai_config_dialog.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
 import 'package:han_music/app/modules/settings/source_config_dialog.dart';
 import 'package:han_music/app/services/library_service.dart';
+import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
 import 'package:han_music/app/services/settings_service.dart';
 
@@ -76,6 +78,24 @@ class SettingsView extends StatelessWidget {
             );
           },
         ),
+        const _SectionHeader('AI 服务'),
+        Obx(
+          () {
+            final ai = settings.ai.value;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.auto_awesome_outlined),
+              title: const Text('AI 服务（歌词获取）'),
+              subtitle: Text(
+                ai == null ? '未配置（阶跃星辰 / 智谱 / DeepSeek）' : '${ai.provider.label} · ${ai.model}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showAiConfigDialog(context),
+            );
+          },
+        ),
         const _SectionHeader('数据'),
         Obx(
           () => ListTile(
@@ -83,7 +103,9 @@ class SettingsView extends StatelessWidget {
             leading: const Icon(Icons.storage_outlined),
             title: const Text('占用情况'),
             subtitle: Text(
-              '曲库 ${library.songs.length} 首 · 歌单 ${playlists.playlists.length} 个',
+              '曲库 ${library.songs.length} 首 · '
+              '歌单 ${playlists.playlists.length} 个 · '
+              '歌词缓存 ${Get.find<LyricsService>().cacheCount.value} 篇',
             ),
           ),
         ),
@@ -100,6 +122,13 @@ class SettingsView extends StatelessWidget {
           title: const Text('清空歌单数据'),
           subtitle: const Text('删除自建歌单并清空收藏歌单内容'),
           onTap: () => _confirmClearPlaylists(context, controller),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.lyrics_outlined),
+          title: const Text('清空歌词缓存'),
+          subtitle: const Text('删除本地保存的歌词，重新播放时按需获取'),
+          onTap: () => _confirmClearLyrics(context, controller),
         ),
         const _SectionHeader('关于'),
         ListTile(
@@ -150,6 +179,21 @@ class SettingsView extends StatelessWidget {
     );
     if (confirmed) {
       await controller.clearPlaylists();
+    }
+  }
+
+  Future<void> _confirmClearLyrics(
+    BuildContext context,
+    SettingsController controller,
+  ) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清空歌词缓存',
+      content: '将删除本地保存的全部歌词（含手动粘贴），再次播放需重新获取，确定继续？',
+      confirmLabel: '清空',
+    );
+    if (confirmed) {
+      await controller.clearLyricsCache();
     }
   }
 }

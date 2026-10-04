@@ -8,8 +8,8 @@ import 'package:han_music/app/core/exceptions/app_exception.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/data/models/song.dart';
-import 'package:han_music/app/data/sources/local/local_lyrics.dart';
 import 'package:han_music/app/core/utils/lyrics.dart';
+import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/play_queue_manager.dart';
 import 'package:han_music/app/services/settings_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -25,7 +25,7 @@ class PlayerService extends GetxService {
     this._store,
     this._settings, {
     Future<String> Function(Song song)? urlResolver,
-    Future<String?> Function(Song song)? lyricsResolver,
+    LyricsResolver? lyricsResolver,
   })  : _urlResolver = urlResolver,
         _lyricsResolver = lyricsResolver;
 
@@ -35,8 +35,8 @@ class PlayerService extends GetxService {
   /// 在线歌曲播放地址解析器（由 OnlineSourceService 提供）。
   final Future<String> Function(Song song)? _urlResolver;
 
-  /// 在线歌曲歌词解析器（由 OnlineSourceService 提供；可失败降级）。
-  final Future<String?> Function(Song song)? _lyricsResolver;
+  /// 歌词解析器（由 LyricsService 提供：缓存→内嵌→网络源→AI 链路）。
+  final LyricsResolver? _lyricsResolver;
 
   late final AudioPlayer _player;
   final _subscriptions = <StreamSubscription<dynamic>>[];
@@ -57,6 +57,9 @@ class PlayerService extends GetxService {
 
   /// 当前歌曲的歌词（解析失败/无歌词为 null，UI 展示占位）。
   final lyrics = Rxn<LyricsDocument>();
+
+  /// 当前歌词是否来自 AI（播放页展示来源标识）。
+  final lyricsFromAi = false.obs;
 
   /// 歌词装载序号：切歌后旧结果晚到直接丢弃。
   int _lyricsSeq = 0;
@@ -207,22 +210,25 @@ class PlayerService extends GetxService {
     }
   }
 
-  /// 装载当前歌曲歌词：本地读内嵌标签，在线经歌词解析器获取；
-  /// 失败静默降级（歌词不影响播放）。
-  Future<void> _loadLyrics(Song song) async {
+  /// 装载当前歌曲歌词（链路在 LyricsService）；失败静默降级占位。
+  Future<void> _loadLyrics(Song song, {bool forceRefresh = false}) async {
     final seq = ++_lyricsSeq;
-    String? raw;
+    ResolvedLyrics? resolved;
     try {
-      if (song.source == SongSource.local) {
-        raw = await readEmbeddedLyrics(song.pathOrUrl);
-      } else if (_lyricsResolver != null) {
-        raw = await _lyricsResolver(song);
-      }
+      resolved = await _lyricsResolver?.call(song, forceRefresh: forceRefresh);
     } on Exception {
-      raw = null;
+      resolved = null;
     }
     if (seq != _lyricsSeq) return;
-    lyrics.value = raw == null ? null : LyricsDocument.parse(raw);
+    lyrics.value = resolved?.document;
+    lyricsFromAi.value = resolved?.fromAi ?? false;
+  }
+
+  /// 重新获取当前歌曲歌词（AI 结果可被覆盖，手动粘贴保留）。
+  Future<void> refreshLyrics() async {
+    final song = current.value;
+    if (song == null) return;
+    await _loadLyrics(song, forceRefresh: true);
   }
 
   /// 在线歌曲且地址未解析时经 resolver 获取，解析结果回写队列缓存。

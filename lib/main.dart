@@ -4,10 +4,15 @@ import 'package:han_music/app/core/constants/app_constants.dart';
 import 'package:han_music/app/core/constants/app_routes.dart';
 import 'package:han_music/app/core/platform/player_backend.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
+import 'package:han_music/app/core/storage/secret_store.dart';
 import 'package:han_music/app/core/theme/app_theme.dart';
+import 'app/data/models/song.dart';
+import 'app/data/sources/local/local_lyrics.dart';
 import 'app/routes/app_pages.dart';
+import 'app/services/ai_service.dart';
 import 'app/services/library_import_service.dart';
 import 'app/services/library_service.dart';
+import 'app/services/lyrics_service.dart';
 import 'app/services/online_source_service.dart';
 import 'app/services/player_service.dart';
 import 'app/services/playlist_service.dart';
@@ -31,12 +36,33 @@ Future<void> main() async {
   final playlists = Get.put(PlaylistService(store), permanent: true);
   await playlists.load();
   final onlineSource = Get.put(OnlineSourceService(), permanent: true);
+  final ai = Get.put(AiService(SecureSecretStore()), permanent: true);
+  await ai.init();
+  final lyrics = Get.put(
+    LyricsService(
+      store,
+      readEmbedded: readEmbeddedLyrics,
+      readSourceLyrics: (song) async => song.source == SongSource.online
+          ? await onlineSource.resolveLyrics(song)
+          : null,
+      isAiConfigured: () {
+        final config = settings.ai.value;
+        return config != null && ai.hasKey(config.provider);
+      },
+      fetchAiLyrics: (song) => ai.fetchLyrics(
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+      ),
+    ),
+    permanent: true,
+  );
   final player = Get.put(
     PlayerService(
       store,
       settings,
       urlResolver: onlineSource.resolveForPlayer,
-      lyricsResolver: onlineSource.resolveLyrics,
+      lyricsResolver: lyrics.resolve,
     ),
     permanent: true,
   );
