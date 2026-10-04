@@ -52,7 +52,7 @@ flutter test      # 单元测试
 flutter run       # 按所选设备运行
 ```
 
-Windows 桌面端构建需系统开启开发者模式（插件 symlink 依赖）：`设置 → 系统 → 开发者选项`。
+**构建验证**：Android release（music110 签名 APK）与 Web（`flutter build web`，条件编译 stub 全通过）已验证；Windows 桌面端需系统开启开发者模式（插件 symlink 依赖）：`设置 → 系统 → 开发者选项`；iOS/macOS/Linux 需对应系统环境验证。
 
 ## 发布构建（Android）
 
