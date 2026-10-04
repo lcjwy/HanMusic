@@ -32,4 +32,7 @@ abstract final class AppConstants {
   static const keyPlaylists = 'playlists';
   static const favoritePlaylistId = 'fav';
   static const favoritePlaylistName = '我喜欢的音乐';
+
+  // ---- 应用信息 ----
+  static const appVersion = '0.2.0';
 }

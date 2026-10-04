@@ -134,6 +134,25 @@ void main() {
     expect(reloaded.byId(created.id)!.coverId, 'mint');
   });
 
+  test('clearAll 清空自建歌单与收藏内容，收藏歌单本身保留', () async {
+    await service.load();
+    await service.create(name: '甲');
+    await service.create(name: '乙');
+    await service.toggleFavorite(song('/a.mp3'));
+
+    await service.clearAll();
+
+    expect(service.playlists.length, 1);
+    expect(service.playlists.first.id, Playlist.favoriteId);
+    expect(service.playlists.first.songs, isEmpty);
+    expect(service.isFavorite(song('/a.mp3').id), isFalse);
+
+    final reloaded = PlaylistService(store);
+    await reloaded.load();
+    expect(reloaded.playlists.length, 1);
+    expect(reloaded.playlists.first.songs, isEmpty);
+  });
+
   test('数据损坏时按空处理并补建收藏歌单', () async {
     await store.write('playlists', '{broken json');
     await service.load();

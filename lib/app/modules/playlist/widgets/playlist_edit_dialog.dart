@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/core/io/cover_store.dart';
+import 'package:han_music/app/core/io/local_file.dart';
 import 'package:han_music/app/core/widgets/playlist_cover.dart';
 import 'package:han_music/app/data/models/playlist.dart';
 import 'package:han_music/app/services/playlist_service.dart';
@@ -154,8 +155,12 @@ class _PlaylistEditDialogState extends State<_PlaylistEditDialog> {
                     return _CoverCell(
                       selected: selected,
                       onTap: () => setState(() {
+                        // 改选内置图：清掉本会话已复制的自定义图片文件，避免泄漏
+                        if (_customCoverPath != null) {
+                          localFileDelete(_customCoverPath!);
+                          _customCoverPath = null;
+                        }
                         _coverId = cover.id;
-                        _customCoverPath = null;
                       }),
                       child: PlaylistCoverArt(
                         coverId: cover.id,

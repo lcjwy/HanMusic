@@ -53,9 +53,7 @@ class PlaylistDetailController extends GetxController {
     if (playlist == null || index < 0 || index >= playlist.songs.length) {
       return;
     }
-    final tapped = playlist.songs[index];
-    final start = playlist.songs.indexOf(tapped);
-    await _player.playQueue(playlist.songs, initialIndex: start);
+    await _player.playQueue(playlist.songs, initialIndex: index);
   }
 
   /// 整单播放；[shuffle] 为 true 时随机顺序。

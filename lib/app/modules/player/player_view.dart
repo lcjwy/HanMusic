@@ -386,15 +386,19 @@ class _LyricsViewState extends State<_LyricsView> {
           );
         }
         // 切歌（文档更换）：复位跟随状态，从头开始跟随
-        if (!identical(doc, _lastDoc)) {
+        final isNewDoc = !identical(doc, _lastDoc);
+        if (isNewDoc) {
           _lastDoc = doc;
           _lastFollowed = -2;
-          if (_scroll.hasClients) _scroll.jumpTo(0);
         }
         final current = doc.hasTimestamps
             ? doc.currentIndexAt(position)
             : -1;
-        WidgetsBinding.instance.addPostFrameCallback((_) => _follow(current));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // jumpTo 不进 build 期：避免布局期修改滚动位置触发异常
+          if (isNewDoc && _scroll.hasClients) _scroll.jumpTo(0);
+          _follow(current);
+        });
         return ListView.builder(
           controller: _scroll,
           padding: const EdgeInsets.symmetric(vertical: 120, horizontal: 8),

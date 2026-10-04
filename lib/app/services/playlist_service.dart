@@ -113,6 +113,26 @@ class PlaylistService extends GetxService {
     return true;
   }
 
+  /// 清空全部歌单数据（数据管理用）：删除自建歌单、清空收藏歌单内歌曲；
+  /// 内置收藏歌单本身保留。返回清理的自定义封面文件数。
+  Future<int> clearAll() async {
+    var removedFiles = 0;
+    for (final playlist in playlists) {
+      if (playlist.deletable) {
+        _deleteCustomCoverFile(playlist);
+        removedFiles++;
+      }
+    }
+    playlists.removeWhere((p) => p.deletable);
+    final fav = byId(Playlist.favoriteId);
+    if (fav != null && fav.songs.isNotEmpty) {
+      _replace(fav.copyWith(songs: const []));
+    }
+    _syncFavoriteIds();
+    await _persist();
+    return removedFiles;
+  }
+
   /// 更新封面：选内置图时清掉旧自定义文件；换新自定义图时同样清理。
   Future<void> updateCover(
     String id, {

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:han_music/app/core/constants/app_constants.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
 import 'package:han_music/app/modules/settings/source_config_dialog.dart';
+import 'package:han_music/app/services/library_service.dart';
+import 'package:han_music/app/services/playlist_service.dart';
 import 'package:han_music/app/services/settings_service.dart';
 
 /// 设置页：外观 / 网络源 / 数据管理 / 关于。
@@ -14,6 +17,8 @@ class SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<SettingsController>();
     final settings = Get.find<SettingsService>();
+    final library = Get.find<LibraryService>();
+    final playlists = Get.find<PlaylistService>();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -43,11 +48,22 @@ class SettingsView extends StatelessWidget {
                 controller.setThemeMode(selection.first),
           ),
         ),
+        const _SectionHeader('播放'),
+        Obx(
+          () => SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('播放失败自动跳过'),
+            subtitle: const Text('文件损坏或加载失败时自动切换下一曲'),
+            value: settings.autoSkipOnFail.value,
+            onChanged: controller.setAutoSkipOnFail,
+          ),
+        ),
         const _SectionHeader('网络源'),
         Obx(
           () {
             final source = settings.source.value;
             return ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.cloud_outlined),
               title: const Text('网络音乐源'),
               subtitle: Text(
@@ -61,17 +77,47 @@ class SettingsView extends StatelessWidget {
           },
         ),
         const _SectionHeader('数据'),
+        Obx(
+          () => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.storage_outlined),
+            title: const Text('占用情况'),
+            subtitle: Text(
+              '曲库 ${library.songs.length} 首 · 歌单 ${playlists.playlists.length} 个',
+            ),
+          ),
+        ),
         ListTile(
-          leading: const Icon(Icons.delete_sweep_outlined),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.library_music_outlined),
           title: const Text('清空曲库索引'),
           subtitle: const Text('仅移除索引，不删除源文件'),
           onTap: () => _confirmClearLibrary(context, controller),
         ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.queue_music_outlined),
+          title: const Text('清空歌单数据'),
+          subtitle: const Text('删除自建歌单并清空收藏歌单内容'),
+          onTap: () => _confirmClearPlaylists(context, controller),
+        ),
         const _SectionHeader('关于'),
-        const ListTile(
-          leading: Icon(Icons.music_note),
-          title: Text('HanMusic'),
-          subtitle: Text('v0.1.0 · MVP'),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.music_note),
+          title: const Text('HanMusic'),
+          subtitle: Text('v${AppConstants.appVersion}'),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.description_outlined),
+          title: const Text('开源许可'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => showLicensePage(
+            context: context,
+            applicationName: 'HanMusic',
+            applicationVersion: AppConstants.appVersion,
+          ),
         ),
       ],
     );
@@ -89,6 +135,21 @@ class SettingsView extends StatelessWidget {
     );
     if (confirmed) {
       await controller.clearLibrary();
+    }
+  }
+
+  Future<void> _confirmClearPlaylists(
+    BuildContext context,
+    SettingsController controller,
+  ) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清空歌单数据',
+      content: '将删除全部自建歌单并清空收藏歌单内的歌曲（歌曲本身与曲库不受影响），确定继续？',
+      confirmLabel: '清空',
+    );
+    if (confirmed) {
+      await controller.clearPlaylists();
     }
   }
 }
