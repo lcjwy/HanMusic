@@ -9,6 +9,9 @@ import 'package:han_music/app/services/playlist_service.dart';
 class PlayerController extends GetxController {
   PlayerService get player => Get.find<PlayerService>();
 
+  /// 播放页内容视图：false=专辑播放动画，true=歌词滚动（会话内记忆）。
+  final showLyrics = false.obs;
+
   Worker? _errorWorker;
 
   @override
@@ -56,4 +59,7 @@ class PlayerController extends GetxController {
     if (song == null) return false;
     return Get.find<PlaylistService>().toggleFavorite(song);
   }
+
+  /// 切换「专辑动画 / 歌词滚动」两种内容视图。
+  void toggleLyricsView() => showLyrics.value = !showLyrics.value;
 }

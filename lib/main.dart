@@ -32,7 +32,12 @@ Future<void> main() async {
   await playlists.load();
   final onlineSource = Get.put(OnlineSourceService(), permanent: true);
   final player = Get.put(
-    PlayerService(store, settings, urlResolver: onlineSource.resolveForPlayer),
+    PlayerService(
+      store,
+      settings,
+      urlResolver: onlineSource.resolveForPlayer,
+      lyricsResolver: onlineSource.resolveLyrics,
+    ),
     permanent: true,
   );
   await player.init();
@@ -49,7 +54,7 @@ Future<void> main() async {
   runApp(buildApp());
 }
 
-/// 根组件：主题模式响应式绑定设置服务。
+/// 根组件：主题模式响应式绑定设置服务；转场统一丝滑（≤300ms）。
 Widget buildApp() {
   final settings = Get.find<SettingsService>();
   return Obx(
@@ -58,6 +63,8 @@ Widget buildApp() {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: settings.themeMode.value.toFlutterMode(),
+      defaultTransition: Transition.cupertino,
+      transitionDuration: const Duration(milliseconds: 280),
       initialRoute: AppRoutes.home,
       getPages: AppPages.pages,
     ),

@@ -64,6 +64,25 @@ class OnlineSourceAdapter {
     });
   }
 
+  /// 获取在线歌曲歌词原文（LRC 或纯文本）。
+  /// 未配置歌词接口返回 null；响应缺字段同样返回 null。
+  Future<String?> resolveLyrics(Song song) {
+    return _guard(() async {
+      final path = config.lyricsPath.trim();
+      if (path.isEmpty) return null;
+      final rawId = song.id.startsWith('online-')
+          ? song.id.substring('online-'.length)
+          : song.id;
+      final response = await _client
+          .get(_uri(path, {config.lyricsIdParam: rawId}))
+          .timeout(AppConstants.requestTimeout);
+      _ensureOk(response);
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      final lyric = _locate(data, config.lyricsKey)?.toString();
+      return (lyric == null || lyric.trim().isEmpty) ? null : lyric;
+    });
+  }
+
   /// 连通性测试：能完成一次搜索请求（HTTP 200 且 JSON 可解析）即视为可用。
   Future<void> testConnection() => search('test');
 

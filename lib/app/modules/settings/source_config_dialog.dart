@@ -35,6 +35,9 @@ class _SourceConfigDialogState extends State<_SourceConfigDialog> {
   late final TextEditingController _coverKey;
   late final TextEditingController _playIdParam;
   late final TextEditingController _playUrlKey;
+  late final TextEditingController _lyricsPath;
+  late final TextEditingController _lyricsIdParam;
+  late final TextEditingController _lyricsKey;
 
   bool _testing = false;
 
@@ -57,6 +60,9 @@ class _SourceConfigDialogState extends State<_SourceConfigDialog> {
     _coverKey = TextEditingController(text: current.coverKey);
     _playIdParam = TextEditingController(text: current.playIdParam);
     _playUrlKey = TextEditingController(text: current.playUrlKey);
+    _lyricsPath = TextEditingController(text: current.lyricsPath);
+    _lyricsIdParam = TextEditingController(text: current.lyricsIdParam);
+    _lyricsKey = TextEditingController(text: current.lyricsKey);
     _controllers = [
       _baseUrl,
       _searchPath,
@@ -71,6 +77,9 @@ class _SourceConfigDialogState extends State<_SourceConfigDialog> {
       _coverKey,
       _playIdParam,
       _playUrlKey,
+      _lyricsPath,
+      _lyricsIdParam,
+      _lyricsKey,
     ];
   }
 
@@ -96,6 +105,9 @@ class _SourceConfigDialogState extends State<_SourceConfigDialog> {
         coverKey: _coverKey.text.trim(),
         playIdParam: _playIdParam.text.trim(),
         playUrlKey: _playUrlKey.text.trim(),
+        lyricsPath: _lyricsPath.text.trim(),
+        lyricsIdParam: _lyricsIdParam.text.trim(),
+        lyricsKey: _lyricsKey.text.trim(),
       );
 
   Future<void> _testConnection() async {
@@ -154,6 +166,9 @@ class _SourceConfigDialogState extends State<_SourceConfigDialog> {
                 children: [
                   _Field(controller: _searchKeywordKey, label: '搜索关键词参数名'),
                   _Field(controller: _playIdParam, label: '取地址歌曲 id 参数名'),
+                  _Field(controller: _lyricsPath, label: '歌词接口路径（留空不取歌词）', hint: '/lyric'),
+                  _Field(controller: _lyricsIdParam, label: '歌词请求歌曲 id 参数名'),
+                  _Field(controller: _lyricsKey, label: '歌词内容字段'),
                   _Field(controller: _searchListKey, label: '搜索结果列表字段（支持 a.b 嵌套）'),
                   _Field(controller: _idKey, label: '歌曲 id 字段'),
                   _Field(controller: _titleKey, label: '标题字段'),

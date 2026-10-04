@@ -8,6 +8,8 @@ import 'package:han_music/app/core/exceptions/app_exception.dart';
 import 'package:han_music/app/core/storage/key_value_store.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/data/models/song.dart';
+import 'package:han_music/app/data/sources/local/local_lyrics.dart';
+import 'package:han_music/app/core/utils/lyrics.dart';
 import 'package:han_music/app/services/play_queue_manager.dart';
 import 'package:han_music/app/services/settings_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -23,13 +25,18 @@ class PlayerService extends GetxService {
     this._store,
     this._settings, {
     Future<String> Function(Song song)? urlResolver,
-  })  : _urlResolver = urlResolver;
+    Future<String?> Function(Song song)? lyricsResolver,
+  })  : _urlResolver = urlResolver,
+        _lyricsResolver = lyricsResolver;
 
   final KeyValueStore _store;
   final SettingsService _settings;
 
   /// 在线歌曲播放地址解析器（由 OnlineSourceService 提供）。
   final Future<String> Function(Song song)? _urlResolver;
+
+  /// 在线歌曲歌词解析器（由 OnlineSourceService 提供；可失败降级）。
+  final Future<String?> Function(Song song)? _lyricsResolver;
 
   late final AudioPlayer _player;
   final _subscriptions = <StreamSubscription<dynamic>>[];
@@ -47,6 +54,12 @@ class PlayerService extends GetxService {
 
   /// 最近一次播放错误的用户可读文案；UI 展示后置回 null。
   final lastError = Rxn<String>();
+
+  /// 当前歌曲的歌词（解析失败/无歌词为 null，UI 展示占位）。
+  final lyrics = Rxn<LyricsDocument>();
+
+  /// 歌词装载序号：切歌后旧结果晚到直接丢弃。
+  int _lyricsSeq = 0;
 
   /// 已装载音源的歌曲 id（区分"恢复上次播放后首次点播"与常规暂停续播）。
   String? _loadedSongId;
@@ -161,6 +174,7 @@ class PlayerService extends GetxService {
 
   Future<void> _loadAndPlay(Song song, {Duration? startAt}) async {
     final seq = ++_loadSeq;
+    lyrics.value = null; // 切歌即清旧歌词，避免展示上一首内容
     try {
       final playable = await _ensurePlayable(song);
       if (seq != _loadSeq) return;
@@ -173,6 +187,7 @@ class PlayerService extends GetxService {
       if (seq != _loadSeq) return;
       _loadedSongId = playable.id;
       _consecutiveFailures = 0;
+      unawaited(_loadLyrics(playable));
       await _player.play();
     } on AppException catch (e) {
       if (seq != _loadSeq) return;
@@ -190,6 +205,24 @@ class PlayerService extends GetxService {
       final skipped = await _skipOnFailure();
       if (!skipped) _reportError('无法播放「${song.title}」', e);
     }
+  }
+
+  /// 装载当前歌曲歌词：本地读内嵌标签，在线经歌词解析器获取；
+  /// 失败静默降级（歌词不影响播放）。
+  Future<void> _loadLyrics(Song song) async {
+    final seq = ++_lyricsSeq;
+    String? raw;
+    try {
+      if (song.source == SongSource.local) {
+        raw = await readEmbeddedLyrics(song.pathOrUrl);
+      } else if (_lyricsResolver != null) {
+        raw = await _lyricsResolver(song);
+      }
+    } on Exception {
+      raw = null;
+    }
+    if (seq != _lyricsSeq) return;
+    lyrics.value = raw == null ? null : LyricsDocument.parse(raw);
   }
 
   /// 在线歌曲且地址未解析时经 resolver 获取，解析结果回写队列缓存。

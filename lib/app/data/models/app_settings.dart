@@ -9,6 +9,7 @@ class OnlineSourceConfig {
     required this.baseUrl,
     this.searchPath = '/search',
     this.playPath = '/song/url',
+    this.lyricsPath = '',
     this.searchKeywordKey = 'keywords',
     this.searchListKey = 'result',
     this.idKey = 'id',
@@ -19,6 +20,8 @@ class OnlineSourceConfig {
     this.coverKey = 'cover',
     this.playIdParam = 'id',
     this.playUrlKey = 'url',
+    this.lyricsIdParam = 'id',
+    this.lyricsKey = 'lyric',
   });
 
   /// 源根地址，如 `https://example.com/api`（不含末尾斜杠）。
@@ -29,6 +32,9 @@ class OnlineSourceConfig {
 
   /// 取播放地址接口路径，歌曲 id 以 [playIdParam] 为参数名拼接。
   final String playPath;
+
+  /// 歌词接口路径（LRC 或纯文本）；为空表示源不提供歌词。
+  final String lyricsPath;
 
   // ---- 请求参数名 ----
   final String searchKeywordKey;
@@ -49,10 +55,17 @@ class OnlineSourceConfig {
   /// 取地址响应中播放链接字段。
   final String playUrlKey;
 
+  /// 歌词请求的歌曲 id 参数名。
+  final String lyricsIdParam;
+
+  /// 歌词响应中的歌词内容字段（LRC 或纯文本）。
+  final String lyricsKey;
+
   Map<String, dynamic> toJson() => {
         'baseUrl': baseUrl,
         'searchPath': searchPath,
         'playPath': playPath,
+        'lyricsPath': lyricsPath,
         'searchKeywordKey': searchKeywordKey,
         'searchListKey': searchListKey,
         'idKey': idKey,
@@ -63,6 +76,8 @@ class OnlineSourceConfig {
         'coverKey': coverKey,
         'playIdParam': playIdParam,
         'playUrlKey': playUrlKey,
+        'lyricsIdParam': lyricsIdParam,
+        'lyricsKey': lyricsKey,
       };
 
   factory OnlineSourceConfig.fromJson(Map<String, dynamic> json) =>
@@ -70,6 +85,7 @@ class OnlineSourceConfig {
         baseUrl: json['baseUrl'] as String? ?? '',
         searchPath: json['searchPath'] as String? ?? '/search',
         playPath: json['playPath'] as String? ?? '/song/url',
+        lyricsPath: json['lyricsPath'] as String? ?? '',
         searchKeywordKey: json['searchKeywordKey'] as String? ?? 'keywords',
         searchListKey: json['searchListKey'] as String? ?? 'result',
         idKey: json['idKey'] as String? ?? 'id',
@@ -80,5 +96,7 @@ class OnlineSourceConfig {
         coverKey: json['coverKey'] as String? ?? 'cover',
         playIdParam: json['playIdParam'] as String? ?? 'id',
         playUrlKey: json['playUrlKey'] as String? ?? 'url',
+        lyricsIdParam: json['lyricsIdParam'] as String? ?? 'id',
+        lyricsKey: json['lyricsKey'] as String? ?? 'lyric',
       );
 }

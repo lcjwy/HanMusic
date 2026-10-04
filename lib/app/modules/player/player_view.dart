@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:async';
+
 import 'package:han_music/app/core/utils/formatters.dart';
+import 'package:han_music/app/core/utils/lyrics.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
@@ -24,6 +27,15 @@ class PlayerView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('正在播放'),
         actions: [
+          Obx(
+            () => IconButton(
+              tooltip: controller.showLyrics.value ? '专辑动画' : '歌词',
+              icon: Icon(
+                controller.showLyrics.value ? Icons.album : Icons.lyrics,
+              ),
+              onPressed: controller.toggleLyricsView,
+            ),
+          ),
           Obx(() {
             final song = player.current.value;
             if (song == null) return const SizedBox.shrink();
@@ -60,12 +72,19 @@ class PlayerView extends StatelessWidget {
             child: Column(
               children: [
                 Expanded(
-                  child: Center(
-                    child: CoverArt(
-                      url: song.coverUrl,
-                      size: 240,
-                      radius: 20,
-                      iconSize: 80,
+                  child: Obx(
+                    () => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: controller.showLyrics.value
+                          ? _LyricsView(
+                              key: const ValueKey('lyrics'),
+                              player: player,
+                            )
+                          : _AlbumDisc(
+                              key: ValueKey('album-${song.id}'),
+                              url: song.coverUrl,
+                              playing: player.playing.value,
+                            ),
                     ),
                   ),
                 ),
@@ -206,6 +225,212 @@ class _SeekbarState extends State<_Seekbar> {
         ],
       );
     });
+  }
+}
+
+/// 专辑播放动画：播放中封面缓慢旋转的黑胶样式，暂停即停转。
+class _AlbumDisc extends StatefulWidget {
+  const _AlbumDisc({super.key, required this.url, required this.playing});
+
+  final String? url;
+  final bool playing;
+
+  @override
+  State<_AlbumDisc> createState() => _AlbumDiscState();
+}
+
+class _AlbumDiscState extends State<_AlbumDisc>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotation;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotation = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    );
+    if (widget.playing) _rotation.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_AlbumDisc oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.playing == oldWidget.playing) return;
+    widget.playing ? _rotation.repeat() : _rotation.stop();
+  }
+
+  @override
+  void dispose() {
+    _rotation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: RotationTransition(
+        turns: _rotation,
+        child: Container(
+          width: 260,
+          height: 260,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: theme.colorScheme.surfaceContainerHighest,
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.shadow.withValues(alpha: 0.25),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Center(
+            child: ClipOval(
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: CoverArt(
+                  url: widget.url,
+                  size: 180,
+                  radius: 90,
+                  iconSize: 56,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 歌词滚动视图：当前行高亮并自动居中跟随；拖动期间挂起跟随 3 秒；
+/// 点击带时间戳的行跳转播放进度；无歌词展示占位。
+class _LyricsView extends StatefulWidget {
+  const _LyricsView({super.key, required this.player});
+
+  final PlayerService player;
+
+  @override
+  State<_LyricsView> createState() => _LyricsViewState();
+}
+
+class _LyricsViewState extends State<_LyricsView> {
+  static const _lineHeight = 44.0;
+
+  final _scroll = ScrollController();
+  Timer? _resumeTimer;
+  bool _userScrolling = false;
+  LyricsDocument? _lastDoc;
+  int _lastFollowed = -2;
+
+  @override
+  void dispose() {
+    _resumeTimer?.cancel();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    // 仅用户手指拖动（dragDetails 非空）才挂起自动跟随，惯性滚动不挂起
+    final dragDetails = switch (notification) {
+      ScrollStartNotification(:final dragDetails) => dragDetails,
+      ScrollUpdateNotification(:final dragDetails) => dragDetails,
+      OverscrollNotification(:final dragDetails) => dragDetails,
+      _ => null,
+    };
+    if (dragDetails != null) {
+      _resumeTimer?.cancel();
+      _userScrolling = true;
+    } else if (notification is ScrollEndNotification && _userScrolling) {
+      _resumeTimer?.cancel();
+      _resumeTimer = Timer(const Duration(seconds: 3), () {
+        _userScrolling = false;
+      });
+    }
+    return false;
+  }
+
+  void _follow(int index) {
+    if (_userScrolling || index < 0 || !_scroll.hasClients) return;
+    if (index == _lastFollowed) return;
+    _lastFollowed = index;
+    final viewport = _scroll.position.viewportDimension;
+    final target = (index * _lineHeight + _lineHeight / 2 - viewport / 2)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+    _scroll.animateTo(
+      target,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: Obx(() {
+        final doc = widget.player.lyrics.value;
+        final position = widget.player.position.value;
+        if (doc == null || doc.lines.isEmpty) {
+          return Center(
+            child: Text(
+              '暂无歌词',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.outline),
+            ),
+          );
+        }
+        // 切歌（文档更换）：复位跟随状态，从头开始跟随
+        if (!identical(doc, _lastDoc)) {
+          _lastDoc = doc;
+          _lastFollowed = -2;
+          if (_scroll.hasClients) _scroll.jumpTo(0);
+        }
+        final current = doc.hasTimestamps
+            ? doc.currentIndexAt(position)
+            : -1;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _follow(current));
+        return ListView.builder(
+          controller: _scroll,
+          padding: const EdgeInsets.symmetric(vertical: 120, horizontal: 8),
+          itemCount: doc.lines.length,
+          itemBuilder: (context, index) {
+            final line = doc.lines[index];
+            final isCurrent = index == current;
+            return GestureDetector(
+              onTap: line.timestamp == null
+                  ? null
+                  : () => widget.player.seek(line.timestamp!),
+              child: SizedBox(
+                height: _lineHeight,
+                child: Center(
+                  child: Text(
+                    line.text.isEmpty ? '♪' : line.text,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: (isCurrent
+                            ? theme.textTheme.titleMedium
+                            : theme.textTheme.bodyMedium)
+                        ?.copyWith(
+                      color: isCurrent
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline,
+                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }),
+    );
   }
 }
 

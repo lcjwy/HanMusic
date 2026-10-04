@@ -81,6 +81,21 @@ class OnlineSourceService extends GetxService {
     }
   }
 
+  /// 解析在线歌曲歌词（PlayerService 的歌词 resolver 入口）。
+  /// 未配置/失败一律返回 null：歌词获取不影响播放。
+  Future<String?> resolveLyrics(Song song) async {
+    final config = Get.find<SettingsService>().source.value;
+    if (config == null || config.baseUrl.trim().isEmpty) return null;
+    final adapter = _adapterFactory(config);
+    try {
+      return await adapter.resolveLyrics(song);
+    } on AppException {
+      return null;
+    } finally {
+      adapter.close();
+    }
+  }
+
   /// 连通性测试：可用即正常返回，不可用抛 [AppException]。
   Future<void> testConnection(OnlineSourceConfig config) async {
     final adapter = _adapterFactory(config);
