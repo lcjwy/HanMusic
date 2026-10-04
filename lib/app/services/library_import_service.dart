@@ -24,20 +24,21 @@ class LibraryImportService extends GetxService {
   bool get cancelled => _lastRunCancelled;
 
   /// 导入用户选择的音频文件（本地绝对路径）。
-  Future<void> importFiles(List<String> paths) => _run(paths);
+  /// 返回是否真正执行（已有任务进行中或无待处理路径时为 false）。
+  Future<bool> importFiles(List<String> paths) => _run(paths);
 
-  /// 递归导入目录下的音频文件。
-  Future<void> importDirectory(String dirPath) async {
-    await _run(scanAudioFiles(dirPath));
+  /// 递归导入目录下的音频文件。返回值含义同 [importFiles]。
+  Future<bool> importDirectory(String dirPath) async {
+    return _run(scanAudioFiles(dirPath));
   }
 
   /// 请求取消当前导入任务（处理完当前文件后停止）。
   void cancel() => _cancelRequested = true;
 
-  Future<void> _run(List<String> rawPaths) async {
+  Future<bool> _run(List<String> rawPaths) async {
     // 输入可能含重复路径（多选/目录扫描），先去重，保证计数与去重一致
     final paths = rawPaths.toSet().toList();
-    if (importing.value || paths.isEmpty) return;
+    if (importing.value || paths.isEmpty) return false;
     importing.value = true;
     _cancelRequested = false;
     _lastRunCancelled = false;
@@ -74,5 +75,6 @@ class LibraryImportService extends GetxService {
       importing.value = false;
       currentName.value = '';
     }
+    return true;
   }
 }

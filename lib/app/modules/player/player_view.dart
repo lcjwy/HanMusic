@@ -4,6 +4,7 @@ import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
+import 'package:han_music/app/data/models/song.dart';
 import 'package:han_music/app/modules/player/player_controller.dart';
 import 'package:han_music/app/modules/player/widgets/sleep_timer_sheet.dart';
 import 'package:han_music/app/services/player_service.dart';
@@ -129,19 +130,41 @@ class _Seekbar extends StatefulWidget {
 class _SeekbarState extends State<_Seekbar> {
   double? _dragValueMs;
 
+  Worker? _songSwitchWorker;
+
+  @override
+  void initState() {
+    super.initState();
+    // 切歌时丢弃未完成的拖拽：旧位置 seek 到新歌、或超出新歌时长
+    // 触发 Slider 断言，都源于拖拽态跨歌曲残留
+    _songSwitchWorker = ever<Song?>(widget.player.current, (_) {
+      if (_dragValueMs != null) {
+        setState(() => _dragValueMs = null);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _songSwitchWorker?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final player = widget.player;
     return Obx(() {
       final maxMs = player.duration.value.inMilliseconds;
       final positionMs = player.position.value.inMilliseconds;
-      final value = _dragValueMs ??
+      // 拖拽值同样钳制在当前时长内，歌曲中途切换时防御 Slider 断言
+      final dragMs = _dragValueMs?.clamp(0, maxMs).toDouble();
+      final value = dragMs ??
           (maxMs > 0 ? positionMs.clamp(0, maxMs) : 0).toDouble();
       return Row(
         children: [
           Text(
             formatDuration(
-              Duration(milliseconds: _dragValueMs?.toInt() ?? positionMs),
+              Duration(milliseconds: dragMs?.toInt() ?? positionMs),
             ),
             style: Theme.of(context).textTheme.bodySmall,
           ),

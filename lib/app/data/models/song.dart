@@ -102,24 +102,33 @@ class Song {
         'missing': missing,
       };
 
+  /// 仅接受真实字符串，其他类型一律按缺失处理。
+  /// （`value as String?` 遇到数字等类型会抛 TypeError 而非回退默认值）
+  static String? _stringOf(Object? value) => value is String ? value : null;
+
   /// 字段缺失或类型异常时逐项回退默认值，保证损坏数据不阻断加载。
   factory Song.fromJson(Map<String, dynamic> json) {
+    final id = _stringOf(json['id']);
+    final pathOrUrl = _stringOf(json['pathOrUrl']);
     return Song(
-      id: json['id'] as String? ?? 'song-${stableHash('${json['pathOrUrl']}')}',
-      title: json['title'] as String? ?? '未知标题',
-      artist: json['artist'] as String? ?? defaultArtist,
-      album: json['album'] as String? ?? defaultAlbum,
+      id: (id == null || id.isEmpty)
+          ? 'song-${stableHash(pathOrUrl ?? '')}'
+          : id,
+      title: _stringOf(json['title']) ?? '未知标题',
+      artist: _stringOf(json['artist']) ?? defaultArtist,
+      album: _stringOf(json['album']) ?? defaultAlbum,
       duration: json['durationMs'] is num
           ? Duration(milliseconds: (json['durationMs'] as num).toInt())
           : null,
-      coverUrl: json['coverUrl'] as String?,
+      coverUrl: _stringOf(json['coverUrl']),
       source: SongSource.values.firstWhere(
         (s) => s.name == json['source'],
         orElse: () => SongSource.local,
       ),
-      pathOrUrl: json['pathOrUrl'] as String? ?? '',
-      addedAt: DateTime.tryParse(json['addedAt'] as String? ?? '') ?? DateTime.now(),
-      missing: json['missing'] as bool? ?? false,
+      pathOrUrl: pathOrUrl ?? '',
+      addedAt:
+          DateTime.tryParse(_stringOf(json['addedAt']) ?? '') ?? DateTime.now(),
+      missing: json['missing'] is bool ? json['missing'] as bool : false,
     );
   }
 

@@ -19,22 +19,26 @@ class SettingsService extends GetxService {
 
   /// 启动加载；配置损坏时静默回退默认值。
   Future<void> load() async {
-    final raw = _store.read<String>(AppConstants.keySettings);
-    if (raw == null || raw.isEmpty) return;
     try {
+      final raw = _store.read<String>(AppConstants.keySettings);
+      if (raw == null || raw.isEmpty) return;
       final json = jsonDecode(raw) as Map<String, dynamic>;
       themeMode.value = AppThemeMode.values.firstWhere(
         (m) => m.name == json['themeMode'],
         orElse: () => AppThemeMode.system,
       );
-      source.value = json['source'] == null
-          ? null
-          : OnlineSourceConfig.fromJson(
+      source.value = json['source'] is Map
+          ? OnlineSourceConfig.fromJson(
               (json['source'] as Map).cast<String, dynamic>(),
-            );
-      autoSkipOnFail.value = json['autoSkipOnFail'] as bool? ?? true;
+            )
+          : null;
+      autoSkipOnFail.value = json['autoSkipOnFail'] is bool
+          ? json['autoSkipOnFail'] as bool
+          : true;
     } on FormatException {
       // 配置损坏时保持默认值
+    } on TypeError {
+      // 结构/字段类型损坏同理
     }
   }
 

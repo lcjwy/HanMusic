@@ -8,8 +8,6 @@ abstract class KeyValueStore {
   T? read<T>(String key);
 
   Future<void> write(String key, dynamic value);
-
-  Future<void> remove(String key);
 }
 
 /// 基于 GetStorage 的实现（应用运行时使用）。
@@ -31,9 +29,6 @@ class GetStorageStore implements KeyValueStore {
 
   @override
   Future<void> write(String key, dynamic value) => _box.write(key, value);
-
-  @override
-  Future<void> remove(String key) => _box.remove(key);
 }
 
 /// 内存实现：仅用于单元测试。
@@ -49,10 +44,5 @@ class MemoryStore implements KeyValueStore {
   @override
   Future<void> write(String key, dynamic value) async {
     _data[key] = value;
-  }
-
-  @override
-  Future<void> remove(String key) async {
-    _data.remove(key);
   }
 }

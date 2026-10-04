@@ -38,8 +38,7 @@ void main() {
     await service.addAll([localSong('/m/a.mp3'), localSong('/m/b.mp3')]);
     await service.removeSongs([localSong('/m/a.mp3')]);
     expect(service.songs.length, 1);
-    expect(service.containsPath('/m/a.mp3'), isFalse);
-    expect(service.containsPath('/m/b.mp3'), isTrue);
+    expect(service.songs.single.pathOrUrl, '/m/b.mp3');
   });
 
   test('重启加载后对缺失文件标记 missing', () async {

@@ -8,10 +8,12 @@ import 'package:han_music/app/services/player_service.dart';
 class PlayerController extends GetxController {
   PlayerService get player => Get.find<PlayerService>();
 
+  Worker? _errorWorker;
+
   @override
   void onInit() {
     super.onInit();
-    ever<String?>(player.lastError, (message) {
+    _errorWorker = ever<String?>(player.lastError, (message) {
       if (message == null) return;
       Get.snackbar(
         '播放失败',
@@ -21,6 +23,12 @@ class PlayerController extends GetxController {
       );
       player.lastError.value = null;
     });
+  }
+
+  @override
+  void onClose() {
+    _errorWorker?.dispose();
+    super.onClose();
   }
 
   Future<void> toggle() => player.togglePlayPause();

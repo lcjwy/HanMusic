@@ -20,7 +20,6 @@ class LibraryView extends StatelessWidget {
     return Column(
       children: [
         Obx(() {
-          library.songs.length; // 订阅曲库变化以刷新空态
           return controller.selecting
               ? _SelectionBar(controller: controller)
               : _Toolbar(controller: controller);
@@ -28,7 +27,6 @@ class LibraryView extends StatelessWidget {
         const _ImportProgress(),
         Expanded(
           child: Obx(() {
-            library.songs.length;
             final songs = controller.visibleSongs();
             if (library.songs.isEmpty) {
               return EmptyPlaceholder(

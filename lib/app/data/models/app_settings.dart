@@ -49,22 +49,6 @@ class OnlineSourceConfig {
   /// 取地址响应中播放链接字段。
   final String playUrlKey;
 
-  OnlineSourceConfig copyWith({String? baseUrl}) => OnlineSourceConfig(
-        baseUrl: baseUrl ?? this.baseUrl,
-        searchPath: searchPath,
-        playPath: playPath,
-        searchKeywordKey: searchKeywordKey,
-        searchListKey: searchListKey,
-        idKey: idKey,
-        titleKey: titleKey,
-        artistKey: artistKey,
-        albumKey: albumKey,
-        durationKey: durationKey,
-        coverKey: coverKey,
-        playIdParam: playIdParam,
-        playUrlKey: playUrlKey,
-      );
-
   Map<String, dynamic> toJson() => {
         'baseUrl': baseUrl,
         'searchPath': searchPath,

@@ -81,25 +81,52 @@ class LibraryController extends GetxController {
   void clearSelection() => selected.clear();
 
   Future<void> importFiles() async {
-    final files = await FilePicker.pickFiles(
-      dialogTitle: '选择音频文件',
-      type: FileType.custom,
-      allowedExtensions: AppConstants.audioExtensions,
-    );
-    final paths = files.map((f) => f.path).whereType<String>().toList();
+    final List<String> paths;
+    try {
+      final files = await FilePicker.pickFiles(
+        dialogTitle: '选择音频文件',
+        type: FileType.custom,
+        allowedExtensions: AppConstants.audioExtensions,
+      );
+      paths = files.map((f) => f.path).whereType<String>().toList();
+    } on Exception {
+      // 部分平台/权限拒绝时选择器会抛异常，静默丢弃会让用户以为点了没反应
+      Get.snackbar('无法打开文件选择器', '请检查权限后重试');
+      return;
+    }
     if (paths.isEmpty) return;
-    await _importer.importFiles(paths);
-    _notifyImportResult();
+    await _runImport(() => _importer.importFiles(paths));
   }
 
   Future<void> importFolder() async {
-    final dir = await FilePicker.getDirectoryPath(dialogTitle: '选择音乐文件夹');
+    String? picked;
+    try {
+      picked = await FilePicker.getDirectoryPath(dialogTitle: '选择音乐文件夹');
+    } on Exception {
+      Get.snackbar('无法打开目录选择器', '请检查权限后重试');
+      return;
+    }
+    // 提升为非空局部量：闭包捕获的变量不做空提升
+    final dir = picked;
     if (dir == null) return;
-    await _importer.importDirectory(dir);
-    _notifyImportResult();
+    await _runImport(() => _importer.importDirectory(dir));
   }
 
   void cancelImport() => _importer.cancel();
+
+  /// 执行导入并按结果提示：未执行时区分"已有任务进行中"与"无音频文件"。
+  Future<void> _runImport(Future<bool> Function() task) async {
+    final ran = await task();
+    if (!ran) {
+      if (_importer.importing.value) {
+        Get.snackbar('导入进行中', '请等待当前导入完成后再试');
+      } else {
+        Get.snackbar('未找到音频文件', '所选位置没有可导入的音频文件');
+      }
+      return;
+    }
+    _notifyImportResult();
+  }
 
   /// 移除选中项（仅删索引，不动源文件），退出选择模式。
   Future<void> removeSelected() async {

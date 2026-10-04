@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
+import 'package:han_music/app/core/constants/app_constants.dart';
 import 'package:han_music/app/core/exceptions/app_exception.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 import 'package:han_music/app/data/models/song.dart';
@@ -23,16 +24,26 @@ class OnlineSourceService extends GetxService {
   Timer? _debounceTimer;
   int _searchSeq = 0;
 
-  /// 输入防抖 500ms 触发搜索；空关键字清空结果。
-  void searchDebounced(String keyword) {
+  /// 输入防抖触发搜索；空关键字清空结果。
+  ///
+  /// 防抖路径的 Future 不经调用方 await，失败经 [onError] 呈现，
+  /// 否则网络异常会静默丢失（界面只会显示"未找到相关歌曲"）。
+  void searchDebounced(
+    String keyword, {
+    void Function(AppException error)? onError,
+  }) {
     _debounceTimer?.cancel();
     if (keyword.trim().isEmpty) {
       results.clear();
       searching.value = false;
       return;
     }
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      search(keyword);
+    _debounceTimer = Timer(AppConstants.searchDebounce, () {
+      unawaited(
+        search(keyword).catchError((Object e) {
+          if (e is AppException) onError?.call(e);
+        }),
+      );
     });
   }
 
@@ -44,8 +55,9 @@ class OnlineSourceService extends GetxService {
     final config = _requireConfig();
     final seq = ++_searchSeq;
     searching.value = true;
+    final adapter = _adapterFactory(config);
     try {
-      final songs = await _adapterFactory(config).search(keyword.trim());
+      final songs = await adapter.search(keyword.trim());
       if (seq == _searchSeq) results.assignAll(songs);
     } on AppException {
       if (seq == _searchSeq) {
@@ -53,18 +65,30 @@ class OnlineSourceService extends GetxService {
         rethrow;
       }
     } finally {
+      // 适配器为单次请求而建，用毕释放底层连接
+      adapter.close();
       if (seq == _searchSeq) searching.value = false;
     }
   }
 
   /// 解析在线歌曲播放地址（PlayerService 的 URL resolver 入口）。
-  Future<String> resolveForPlayer(Song song) {
-    return _adapterFactory(_requireConfig()).resolvePlayUrl(song);
+  Future<String> resolveForPlayer(Song song) async {
+    final adapter = _adapterFactory(_requireConfig());
+    try {
+      return await adapter.resolvePlayUrl(song);
+    } finally {
+      adapter.close();
+    }
   }
 
   /// 连通性测试：可用即正常返回，不可用抛 [AppException]。
-  Future<void> testConnection(OnlineSourceConfig config) {
-    return _adapterFactory(config).testConnection();
+  Future<void> testConnection(OnlineSourceConfig config) async {
+    final adapter = _adapterFactory(config);
+    try {
+      await adapter.testConnection();
+    } finally {
+      adapter.close();
+    }
   }
 
   OnlineSourceConfig _requireConfig() {

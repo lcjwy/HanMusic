@@ -21,7 +21,8 @@ class OnlineController extends GetxController {
   void onQueryChanged(String value) {
     query.value = value;
     error.value = null;
-    _source.searchDebounced(value);
+    // 防抖路径不经 await，失败需在此呈现；否则网络错误只表现为空结果
+    _source.searchDebounced(value, onError: (e) => error.value = e.message);
   }
 
   Future<void> searchNow() async {

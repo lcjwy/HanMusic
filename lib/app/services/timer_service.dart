@@ -67,7 +67,8 @@ class TimerService extends GetxService {
     final left = deadline.difference(clock.now());
     if (left <= Duration.zero) {
       _clear();
-      _onPause();
+      // 暂停指令的失败无需阻断定时结束；显式标记忽略避免悬挂 rejection
+      unawaited(_onPause());
     } else {
       remaining.value = left;
     }

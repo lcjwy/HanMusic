@@ -18,6 +18,10 @@ class OnlineSourceAdapter {
   final OnlineSourceConfig config;
   final http.Client _client;
 
+  /// 释放底层 HTTP 连接。适配器按单次请求创建使用，用毕即关；
+  /// 注入共享 client 的测试场景下重复关闭无害。
+  void close() => _client.close();
+
   /// 关键词搜索，返回统一 [Song] 列表。
   Future<List<Song>> search(String keyword) {
     return _guard(() async {
