@@ -47,5 +47,5 @@ abstract final class AppConstants {
   static const historyCommitDelay = Duration(seconds: 10);
 
   // ---- 应用信息 ----
-  static const appVersion = '0.2.0';
+  static const appVersion = '0.3.0';
 }

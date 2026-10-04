@@ -178,7 +178,16 @@ class _BiliImportDialogState extends State<_BiliImportDialog> {
               child: const Text('全选'),
             ),
             TextButton(
-              onPressed: () => setState(_selected.clear),
+              onPressed: () => setState(() {
+                for (var i = 0; i < _entries.length; i++) {
+                  if (!_entries[i].importable) continue;
+                  if (_selected.contains(i)) {
+                    _selected.remove(i);
+                  } else {
+                    _selected.add(i);
+                  }
+                }
+              }),
               child: const Text('反选'),
             ),
           ],
@@ -215,7 +224,11 @@ class _BiliImportDialogState extends State<_BiliImportDialog> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 onChanged: (value) => setState(() {
-                  value == true ? _selected.add(index) : _selected.remove(index);
+                  if (value == true) {
+                    _selected.add(index);
+                  } else {
+                    _selected.remove(index);
+                  }
                 }),
               );
             },
