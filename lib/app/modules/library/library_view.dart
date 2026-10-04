@@ -4,6 +4,7 @@ import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
+import 'package:han_music/app/modules/library/bili_import_dialog.dart';
 import 'package:han_music/app/modules/library/library_controller.dart';
 import 'package:han_music/app/modules/playlist/widgets/add_to_playlist_sheet.dart';
 import 'package:han_music/app/services/library_import_service.dart';
@@ -124,11 +125,16 @@ class _Toolbar extends StatelessWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.playlist_add),
             tooltip: '导入音乐',
-            onSelected: (value) =>
-                value == 'files' ? controller.importFiles() : controller.importFolder(),
+            onSelected: (value) => switch (value) {
+              'files' => controller.importFiles(),
+              'folder' => controller.importFolder(),
+              'bili' => showBiliImportDialog(context),
+              _ => {},
+            },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'files', child: Text('导入文件')),
               PopupMenuItem(value: 'folder', child: Text('导入文件夹')),
+              PopupMenuItem(value: 'bili', child: Text('导入 B站缓存')),
             ],
           ),
         ],

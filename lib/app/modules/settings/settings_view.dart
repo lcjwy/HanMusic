@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_constants.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
+import 'package:han_music/app/modules/library/bili_import_dialog.dart';
 import 'package:han_music/app/modules/settings/ai_config_dialog.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
 import 'package:han_music/app/modules/settings/source_config_dialog.dart';
@@ -97,6 +98,13 @@ class SettingsView extends StatelessWidget {
           },
         ),
         const _SectionHeader('数据'),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.download_outlined),
+          title: const Text('B站缓存导入'),
+          subtitle: const Text('提取 B站离线缓存的音频轨加入曲库'),
+          onTap: () => showBiliImportDialog(context),
+        ),
         Obx(
           () => ListTile(
             contentPadding: EdgeInsets.zero,

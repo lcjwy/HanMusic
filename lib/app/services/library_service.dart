@@ -49,7 +49,8 @@ class LibraryService extends GetxService {
   }
 
   Song _markMissing(Song song) {
-    if (song.source != SongSource.local) return song;
+    // 在线歌曲无本地文件不校验；本地与 B站缓存音轨按文件存在性标记
+    if (song.source == SongSource.online) return song;
     return song.copyWith(missing: !_fileExists(song.pathOrUrl));
   }
 
