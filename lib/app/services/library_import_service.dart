@@ -29,7 +29,7 @@ class LibraryImportService extends GetxService {
 
   /// 递归导入目录下的音频文件。返回值含义同 [importFiles]。
   Future<bool> importDirectory(String dirPath) async {
-    return _run(scanAudioFiles(dirPath));
+    return _run(await scanAudioFiles(dirPath));
   }
 
   /// 请求取消当前导入任务（处理完当前文件后停止）。

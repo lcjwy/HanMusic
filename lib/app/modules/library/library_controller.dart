@@ -116,7 +116,14 @@ class LibraryController extends GetxController {
 
   /// 执行导入并按结果提示：未执行时区分"已有任务进行中"与"无音频文件"。
   Future<void> _runImport(Future<bool> Function() task) async {
-    final ran = await task();
+    final bool ran;
+    try {
+      ran = await task();
+    } on Exception {
+      // 目录不可读等扫描期异常：避免未处理异步错误且用户无感知
+      Get.snackbar('导入失败', '扫描或读取文件时出错，请重试');
+      return;
+    }
     if (!ran) {
       if (_importer.importing.value) {
         Get.snackbar('导入进行中', '请等待当前导入完成后再试');

@@ -1,6 +1,8 @@
 import 'dart:io';
 
-import 'package:just_audio_media_kit/just_audio_media_kit.dart';/// 初始化 media_kit 播放后端：内部仅在 Windows/Linux 上生效，其余平台跳过。
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
+
+/// 初始化 media_kit 播放后端：内部仅在 Windows/Linux 上生效，其余平台跳过。
 void initPlayerBackend() {
   JustAudioMediaKit.ensureInitialized();
 }
