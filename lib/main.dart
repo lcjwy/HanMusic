@@ -10,6 +10,7 @@ import 'app/data/models/song.dart';
 import 'app/data/sources/local/local_lyrics.dart';
 import 'app/routes/app_pages.dart';
 import 'app/services/ai_service.dart';
+import 'app/services/history_service.dart';
 import 'app/services/library_import_service.dart';
 import 'app/services/library_service.dart';
 import 'app/services/lyrics_service.dart';
@@ -38,6 +39,8 @@ Future<void> main() async {
   final onlineSource = Get.put(OnlineSourceService(), permanent: true);
   final ai = Get.put(AiService(SecureSecretStore()), permanent: true);
   await ai.init();
+  final history = Get.put(HistoryService(store), permanent: true);
+  await history.load();
   final lyrics = Get.put(
     LyricsService(
       store,
@@ -69,6 +72,7 @@ Future<void> main() async {
   await player.init();
   final timer = Get.put(TimerService(onPause: player.pause), permanent: true);
   player.stopAfterCurrentHook = timer.consumeStopAfterCurrent;
+  player.playbackCommitted = history.record;
 
   if (backgroundAudioSupported) {
     await JustAudioBackground.init(

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
+import 'package:han_music/app/services/history_service.dart';
 import 'package:han_music/app/services/library_service.dart';
 import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
@@ -30,5 +31,11 @@ class SettingsController extends GetxController {
   Future<void> clearLyricsCache() async {
     await Get.find<LyricsService>().clearCache();
     Get.snackbar('已完成', '歌词缓存已清空');
+  }
+
+  /// 清空播放历史，调用前需 UI 二次确认。
+  Future<void> clearHistory() async {
+    await Get.find<HistoryService>().clear();
+    Get.snackbar('已完成', '播放历史已清空');
   }
 }

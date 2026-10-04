@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:han_music/app/core/constants/app_routes.dart';
 import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
@@ -121,6 +122,11 @@ class _Toolbar extends StatelessWidget {
               for (final sort in LibrarySort.values)
                 PopupMenuItem(value: sort, child: Text(sort.label)),
             ],
+          ),
+          IconButton(
+            tooltip: '最近播放',
+            icon: const Icon(Icons.history),
+            onPressed: () => Get.toNamed(AppRoutes.history),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.playlist_add),

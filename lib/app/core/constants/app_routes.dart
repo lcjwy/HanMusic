@@ -3,4 +3,5 @@ abstract final class AppRoutes {
   static const home = '/';
   static const player = '/player';
   static const playlistDetail = '/playlist';
+  static const history = '/history';
 }

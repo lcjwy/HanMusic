@@ -39,6 +39,13 @@ abstract final class AppConstants {
   static const favoritePlaylistId = 'fav';
   static const favoritePlaylistName = '我喜欢的音乐';
 
+  // ---- 播放历史（F6）----
+  static const keyHistory = 'history';
+  static const historyLimit = 200;
+
+  /// 进入播放态多久后记入历史。
+  static const historyCommitDelay = Duration(seconds: 10);
+
   // ---- 应用信息 ----
   static const appVersion = '0.2.0';
 }

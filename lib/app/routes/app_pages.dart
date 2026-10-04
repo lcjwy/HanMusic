@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_routes.dart';
 import 'package:han_music/app/modules/home/home_binding.dart';
 import 'package:han_music/app/modules/home/home_view.dart';
+import 'package:han_music/app/modules/history/history_view.dart';
 import 'package:han_music/app/modules/player/player_binding.dart';
 import 'package:han_music/app/modules/player/player_view.dart';
 import 'package:han_music/app/modules/playlist/playlist_binding.dart';
@@ -25,5 +26,6 @@ class AppPages {
       page: () => const PlaylistDetailView(),
       binding: PlaylistDetailBinding(),
     ),
+    GetPage(name: AppRoutes.history, page: () => const HistoryView()),
   ];
 }

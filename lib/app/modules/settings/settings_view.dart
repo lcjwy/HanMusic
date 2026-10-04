@@ -7,6 +7,7 @@ import 'package:han_music/app/modules/library/bili_import_dialog.dart';
 import 'package:han_music/app/modules/settings/ai_config_dialog.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
 import 'package:han_music/app/modules/settings/source_config_dialog.dart';
+import 'package:han_music/app/services/history_service.dart';
 import 'package:han_music/app/services/library_service.dart';
 import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
@@ -113,6 +114,7 @@ class SettingsView extends StatelessWidget {
             subtitle: Text(
               '曲库 ${library.songs.length} 首 · '
               '歌单 ${playlists.playlists.length} 个 · '
+              '历史 ${Get.find<HistoryService>().entries.length} 条 · '
               '歌词缓存 ${Get.find<LyricsService>().cacheCount.value} 篇',
             ),
           ),
@@ -137,6 +139,13 @@ class SettingsView extends StatelessWidget {
           title: const Text('清空歌词缓存'),
           subtitle: const Text('删除本地保存的歌词，重新播放时按需获取'),
           onTap: () => _confirmClearLyrics(context, controller),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.history),
+          title: const Text('清空播放历史'),
+          subtitle: const Text('删除全部最近播放记录'),
+          onTap: () => _confirmClearHistory(context, controller),
         ),
         const _SectionHeader('关于'),
         ListTile(
@@ -202,6 +211,21 @@ class SettingsView extends StatelessWidget {
     );
     if (confirmed) {
       await controller.clearLyricsCache();
+    }
+  }
+
+  Future<void> _confirmClearHistory(
+    BuildContext context,
+    SettingsController controller,
+  ) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清空播放历史',
+      content: '将删除全部最近播放记录，确定继续？',
+      confirmLabel: '清空',
+    );
+    if (confirmed) {
+      await controller.clearHistory();
     }
   }
 }

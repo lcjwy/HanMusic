@@ -79,6 +79,12 @@ class PlayerService extends GetxService {
   /// 自动切歌。与 TimerService 保持单向依赖，避免服务互相引用。
   bool Function()? stopAfterCurrentHook;
 
+  /// 播放提交钩子（由历史服务注入）：进入播放态 ≥ 10s 视为实际播放，
+  /// 记入历史。单向依赖，与 stopAfterCurrentHook 同一模式。
+  void Function(Song song)? playbackCommitted;
+
+  Timer? _commitTimer;
+
   /// 连续失败计数：一轮队列内全部失败则停止自动跳过，避免死循环。
   int _consecutiveFailures = 0;
 
@@ -192,6 +198,7 @@ class PlayerService extends GetxService {
       _consecutiveFailures = 0;
       unawaited(_loadLyrics(playable));
       await _player.play();
+      _scheduleHistoryCommit(seq, playable);
     } on AppException catch (e) {
       if (seq != _loadSeq) return;
       buffering.value = false;
@@ -208,6 +215,16 @@ class PlayerService extends GetxService {
       final skipped = await _skipOnFailure();
       if (!skipped) _reportError('无法播放「${song.title}」', e);
     }
+  }
+
+  /// 连续播放 10s 才记入历史；期间切歌/装载则取消。
+  void _scheduleHistoryCommit(int seq, Song song) {
+    _commitTimer?.cancel();
+    _commitTimer = Timer(AppConstants.historyCommitDelay, () {
+      if (seq == _loadSeq && current.value?.id == song.id) {
+        playbackCommitted?.call(song);
+      }
+    });
   }
 
   /// 装载当前歌曲歌词（链路在 LyricsService）；失败静默降级占位。
@@ -419,6 +436,7 @@ class PlayerService extends GetxService {
 
   @override
   void onClose() {
+    _commitTimer?.cancel();
     for (final sub in _subscriptions) {
       sub.cancel();
     }
