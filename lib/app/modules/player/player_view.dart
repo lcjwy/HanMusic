@@ -8,6 +8,7 @@ import 'package:han_music/app/data/models/song.dart';
 import 'package:han_music/app/modules/player/player_controller.dart';
 import 'package:han_music/app/modules/player/widgets/sleep_timer_sheet.dart';
 import 'package:han_music/app/services/player_service.dart';
+import 'package:han_music/app/services/playlist_service.dart';
 import 'package:han_music/app/services/timer_service.dart';
 
 /// 播放页：封面、进度、播放控制、播放模式、音量、定时入口。
@@ -23,6 +24,20 @@ class PlayerView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('正在播放'),
         actions: [
+          Obx(() {
+            final song = player.current.value;
+            if (song == null) return const SizedBox.shrink();
+            final favorite =
+                Get.find<PlaylistService>().favoriteIds.value.contains(song.id);
+            return IconButton(
+              tooltip: favorite ? '取消收藏' : '收藏',
+              icon: Icon(
+                favorite ? Icons.favorite : Icons.favorite_border,
+                color: favorite ? Theme.of(context).colorScheme.primary : null,
+              ),
+              onPressed: controller.toggleFavorite,
+            );
+          }),
           IconButton(
             icon: const Icon(Icons.queue_music),
             tooltip: '当前队列',

@@ -4,6 +4,7 @@ import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/modules/online/online_controller.dart';
+import 'package:han_music/app/modules/playlist/widgets/add_to_playlist_sheet.dart';
 import 'package:han_music/app/services/online_source_service.dart';
 import 'package:han_music/app/services/settings_service.dart';
 
@@ -101,6 +102,8 @@ class OnlineView extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   onTap: () => controller.playResult(index),
+                  onLongPress: () =>
+                      showAddToPlaylistSheet(context, songs: [song]),
                 );
               },
             );

@@ -43,6 +43,6 @@ class OnlineController extends GetxController {
 
   /// 跳转到设置页配置网络源。
   void openSourceSettings() {
-    Get.find<HomeController>().switchTo(2);
+    Get.find<HomeController>().switchTo(3);
   }
 }

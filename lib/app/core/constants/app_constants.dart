@@ -27,4 +27,9 @@ abstract final class AppConstants {
 
   /// 在线搜索输入防抖时长。
   static const searchDebounce = Duration(milliseconds: 500);
+
+  // ---- 歌单 ----
+  static const keyPlaylists = 'playlists';
+  static const favoritePlaylistId = 'fav';
+  static const favoritePlaylistName = '我喜欢的音乐';
 }

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/modules/player/widgets/queue_sheet.dart';
 import 'package:han_music/app/services/player_service.dart';
+import 'package:han_music/app/services/playlist_service.dart';
 
 /// 播放页 ViewModel：对全局 PlayerService 的薄转发 + 错误提示消费。
 class PlayerController extends GetxController {
@@ -48,4 +49,11 @@ class PlayerController extends GetxController {
   }
 
   void openQueue(BuildContext context) => showQueueSheet(context);
+
+  /// 收藏/取消收藏当前歌曲，返回操作后是否已收藏。
+  Future<bool> toggleFavorite() async {
+    final song = player.current.value;
+    if (song == null) return false;
+    return Get.find<PlaylistService>().toggleFavorite(song);
+  }
 }

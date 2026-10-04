@@ -5,6 +5,7 @@ import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/modules/library/library_controller.dart';
+import 'package:han_music/app/modules/playlist/widgets/add_to_playlist_sheet.dart';
 import 'package:han_music/app/services/library_import_service.dart';
 import 'package:han_music/app/services/library_service.dart';
 
@@ -165,6 +166,14 @@ class _SelectionBar extends StatelessWidget {
                       ? controller.clearSelection()
                       : controller.selected.addAll(visible),
               child: Text(allSelected ? '取消全选' : '全选'),
+            ),
+            IconButton(
+              tooltip: '加入歌单',
+              icon: const Icon(Icons.playlist_add),
+              onPressed: selectedCount == 0
+                  ? null
+                  : () => showAddToPlaylistSheet(
+                      context, songs: controller.selected.toList()),
             ),
             IconButton(
               tooltip: '移除所选',

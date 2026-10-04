@@ -4,6 +4,8 @@ import 'package:han_music/app/modules/home/home_binding.dart';
 import 'package:han_music/app/modules/home/home_view.dart';
 import 'package:han_music/app/modules/player/player_binding.dart';
 import 'package:han_music/app/modules/player/player_view.dart';
+import 'package:han_music/app/modules/playlist/playlist_binding.dart';
+import 'package:han_music/app/modules/playlist/playlist_detail_view.dart';
 
 /// 路由表：页面与依赖绑定集中登记。
 class AppPages {
@@ -17,6 +19,11 @@ class AppPages {
       name: AppRoutes.player,
       page: () => const PlayerView(),
       binding: PlayerBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.playlistDetail,
+      page: () => const PlaylistDetailView(),
+      binding: PlaylistDetailBinding(),
     ),
   ];
 }
