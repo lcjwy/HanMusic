@@ -47,16 +47,29 @@ class LibraryController extends GetxController {
           .toList();
     }
     final Comparator<Song> comparator = switch (sortBy.value) {
-      LibrarySort.addedDesc => (a, b) => b.addedAt.compareTo(a.addedAt),
-      LibrarySort.addedAsc => (a, b) => a.addedAt.compareTo(b.addedAt),
-      LibrarySort.title => (a, b) =>
-          a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-      LibrarySort.artist => (a, b) =>
-          a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
+      LibrarySort.addedDesc => _stable(_addedDesc),
+      LibrarySort.addedAsc => _stable(_addedAsc),
+      LibrarySort.title => _stable(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        ),
+      LibrarySort.artist => _stable(
+          (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
+        ),
     };
     songs.sort(comparator);
     return songs;
   }
+
+  static int _addedDesc(Song a, Song b) => b.addedAt.compareTo(a.addedAt);
+
+  static int _addedAsc(Song a, Song b) => a.addedAt.compareTo(b.addedAt);
+
+  /// Dart 的 List.sort 不稳定：主键相同的条目（同批导入的 addedAt 常因
+  /// 时钟粒度相同）每次排序可能重排，以 id 兜底保证展示顺序稳定。
+  static Comparator<Song> _stable(Comparator<Song> primary) => (a, b) {
+        final result = primary(a, b);
+        return result != 0 ? result : a.id.compareTo(b.id);
+      };
 
   /// 以当前可见列表（排除缺失文件）为队列，从点击项开始播放。
   Future<void> playVisible(int index) async {

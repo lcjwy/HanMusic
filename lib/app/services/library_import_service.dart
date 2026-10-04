@@ -7,9 +7,16 @@ import 'package:han_music/app/services/library_service.dart';
 ///
 /// 支持进度展示与取消；导入一次性批量持久化。
 class LibraryImportService extends GetxService {
-  LibraryImportService(this._library);
+  LibraryImportService(
+    this._library, {
+    Future<Song> Function(String path)? readSong,
+  }) : _readSong = readSong ?? songFromFile;
 
   final LibraryService _library;
+
+  /// 单文件元数据读取；默认实现内部已兜底不抛错，注入实现可能抛错，
+  /// 管线对其做逐文件容错（见 [_run]）。
+  final Future<Song> Function(String path) _readSong;
 
   final importing = false.obs;
   final scanned = 0.obs;
@@ -63,8 +70,12 @@ class LibraryImportService extends GetxService {
             Uri.file(path).pathSegments.where((s) => s.isNotEmpty).lastOrNull ??
                 path;
         if (existingPaths.add(path)) {
-          batch.add(await songFromFile(path));
-          added.value += 1;
+          try {
+            batch.add(await _readSong(path));
+            added.value += 1;
+          } on Exception {
+            // 单文件读取失败不阻断整批导入
+          }
         }
         scanned.value += 1;
       }

@@ -48,4 +48,5 @@ flutter build apk --release   # 产物：build/app/outputs/flutter-apk/app-relea
 ## 分支
 
 - `main`：文档与基线
-- `dev`：日常开发（当前 MVP 实现所在分支）
+- `dev`：日常开发主线（MVP 实现）
+- `dev_mx` / `dev_cj`：并行开发分支（dev_cj 含 Android release 签名配置）
