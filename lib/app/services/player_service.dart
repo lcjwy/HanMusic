@@ -350,6 +350,53 @@ class PlayerService extends GetxService {
 
   Future<void> seek(Duration target) => _player.seek(target);
 
+  /// 从队列移除 [index] 处歌曲（队列管理）：当前曲被删则顺延装载
+  /// 该位置的新曲，队列清空则暂停并清空播放状态。
+  Future<void> removeFromQueue(int index) async {
+    if (index < 0 || index >= queue.length) return;
+    final wasCurrent = index == currentIndex.value;
+    queue.removeAt(index);
+    final next = PlayQueueManager.indexAfterRemoval(
+      removedIndex: index,
+      currentIndex: currentIndex.value,
+      lengthBefore: queue.length + 1,
+    );
+    if (next == null) {
+      await pause();
+      currentIndex.value = -1;
+      current.value = null;
+      _loadedSongId = null;
+      await _persistQueue();
+      await _persistState();
+      return;
+    }
+    currentIndex.value = next;
+    current.value = queue[next];
+    if (wasCurrent) {
+      await _persistState();
+      await _loadAndPlay(queue[next]);
+    } else {
+      await _persistQueue();
+    }
+  }
+
+  /// 拖拽调整队列顺序（ReorderableListView 语义），补偿当前索引位移。
+  Future<void> moveInQueue(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= queue.length) return;
+    if (newIndex > oldIndex) newIndex -= 1;
+    newIndex = newIndex.clamp(0, queue.length - 1);
+    if (newIndex == oldIndex) return;
+    final song = queue.removeAt(oldIndex);
+    queue.insert(newIndex, song);
+    currentIndex.value = PlayQueueManager.indexAfterMove(
+      movedFrom: oldIndex,
+      movedTo: newIndex,
+      currentIndex: currentIndex.value,
+    );
+    current.value = queue[currentIndex.value.clamp(0, queue.length - 1)];
+    await _persistQueue();
+  }
+
   Future<void> setPlayMode(PlayMode mode) async {
     playMode.value = mode;
     await _persistState();

@@ -10,8 +10,9 @@ import 'package:han_music/app/services/playlist_service.dart';
 class PlayerController extends GetxController {
   PlayerService get player => Get.find<PlayerService>();
 
-  /// 播放页内容视图：false=专辑播放动画，true=歌词滚动（会话内记忆）。
-  final showLyrics = false.obs;
+  /// 播放页内容视图（会话内记忆，弹出页面不重置）：
+  /// false=专辑播放动画，true=歌词滚动。
+  static final showLyrics = false.obs;
 
   Worker? _errorWorker;
 

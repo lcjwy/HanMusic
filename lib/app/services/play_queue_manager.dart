@@ -36,6 +36,40 @@ abstract final class PlayQueueManager {
     return (current.clamp(0, length - 1) - 1 + length) % length;
   }
 
+  /// 队列移除一项后的当前索引：返回 null 表示队列已空。
+  /// 当前曲被删时停在该位置（即原下一曲），其余情况补偿位移。
+  static int? indexAfterRemoval({
+    required int removedIndex,
+    required int currentIndex,
+    required int lengthBefore,
+  }) {
+    final lengthAfter = lengthBefore - 1;
+    if (lengthAfter <= 0) return null;
+    var cur = currentIndex;
+    if (removedIndex < cur) {
+      cur -= 1;
+    } else if (removedIndex == cur) {
+      cur = cur.clamp(0, lengthAfter - 1);
+    }
+    return cur;
+  }
+
+  /// 队列移动一项后的当前索引（[movedTo] 为已归一化的目标下标）。
+  static int indexAfterMove({
+    required int movedFrom,
+    required int movedTo,
+    required int currentIndex,
+  }) {
+    if (movedFrom == currentIndex) return movedTo;
+    if (movedFrom < currentIndex && movedTo >= currentIndex) {
+      return currentIndex - 1;
+    }
+    if (movedFrom > currentIndex && movedTo <= currentIndex) {
+      return currentIndex + 1;
+    }
+    return currentIndex;
+  }
+
   static int _shuffleNext(int current, int length, Random? random) {
     if (length <= 1) return current;
     final r = random ?? Random();

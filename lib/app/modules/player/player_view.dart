@@ -29,9 +29,9 @@ class PlayerView extends StatelessWidget {
         actions: [
           Obx(
             () => IconButton(
-              tooltip: controller.showLyrics.value ? '专辑动画' : '歌词',
+              tooltip: PlayerController.showLyrics.value ? '专辑动画' : '歌词',
               icon: Icon(
-                controller.showLyrics.value ? Icons.album : Icons.lyrics,
+                PlayerController.showLyrics.value ? Icons.album : Icons.lyrics,
               ),
               onPressed: controller.toggleLyricsView,
             ),
@@ -75,7 +75,7 @@ class PlayerView extends StatelessWidget {
                   child: Obx(
                     () => AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: controller.showLyrics.value
+                      child: PlayerController.showLyrics.value
                           ? _LyricsView(
                               key: const ValueKey('lyrics'),
                               player: player,
