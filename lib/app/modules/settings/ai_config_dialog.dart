@@ -30,6 +30,9 @@ class _AiConfigDialogState extends State<_AiConfigDialog> {
   bool _saving = false;
   bool _testing = false;
 
+  /// 已保存 Key 的脱敏提示（前 4 后 4），输入新 Key 时提示不变。
+  String? _savedKeyHint;
+
   final _keyController = TextEditingController();
   final _customModelController = TextEditingController();
 
@@ -52,6 +55,8 @@ class _AiConfigDialogState extends State<_AiConfigDialog> {
     if (!mounted) return;
     setState(() {
       _keyController.text = key ?? '';
+      _savedKeyHint =
+          (key != null && key.isNotEmpty) ? AiService.maskKey(key) : null;
       _loadingKey = false;
     });
   }
@@ -164,6 +169,16 @@ class _AiConfigDialogState extends State<_AiConfigDialog> {
                   ),
                 ),
               ),
+              if (_savedKeyHint != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '已保存 Key：$_savedKeyHint',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                ),
+              ],
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _customModel ? '__custom__' : _model,

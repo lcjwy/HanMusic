@@ -125,8 +125,6 @@ class LibraryController extends GetxController {
     await _runImport(() => _importer.importDirectory(dir));
   }
 
-  void cancelImport() => _importer.cancel();
-
   /// 执行导入并按结果提示：未执行时区分"已有任务进行中"与"无音频文件"。
   Future<void> _runImport(Future<bool> Function() task) async {
     final bool ran;
