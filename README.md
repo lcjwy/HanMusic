@@ -52,17 +52,17 @@ flutter test      # 单元测试
 flutter run       # 按所选设备运行
 ```
 
-**构建验证**：Android release（music110 签名 APK）与 Web（`flutter build web`，条件编译 stub 全通过）已验证；Windows 桌面端需系统开启开发者模式（插件 symlink 依赖）：`设置 → 系统 → 开发者选项`；iOS/macOS/Linux 需对应系统环境验证。
+**构建验证**：此前 Android release 与 Web 构建已验证；Windows 桌面端需系统开启开发者模式（插件 symlink 依赖）：`设置 → 系统 → 开发者选项`；iOS/macOS/Linux 需对应系统环境验证。
 
 ## 发布构建（Android）
 
-签名信息在 `android/key.properties`，密钥库为 `android/app/han_music.jks`（别名 `music110`），`release` 构建自动使用：
+复制 `android/key.properties.example` 为 `android/key.properties`，填写本地密钥库路径、别名和口令。这些文件已被 Git 忽略；密钥库应存放在受控位置。CI 可通过 `HAN_MUSIC_STORE_FILE`、`HAN_MUSIC_STORE_PASSWORD`、`HAN_MUSIC_KEY_ALIAS`、`HAN_MUSIC_KEY_PASSWORD` 注入，环境变量优先于本地配置。缺少完整签名配置时，release 构建明确失败，不回退到 debug 签名：
 
 ```bash
 flutter build apk --release   # 产物：build/app/outputs/flutter-apk/app-release.apk
 ```
 
-> 密钥库与口令按项目约定随仓库提交；若仓库转为公开或多人协作，应将两者移出版本管理并妥善保管（丢失无法再发布同签名更新）。
+> 旧签名密钥与口令曾随仓库提交，历史记录中的材料仍视为已暴露。维护者应评估签名轮换/应用商店密钥升级流程；本次移出版本管理不撤销历史泄露，也不会自动更换已安装应用的签名身份。原有本地签名文件可继续用于兼容验证，勿再次上传。
 
 ## 分支
 

@@ -7,12 +7,32 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 签名信息从 android/key.properties 读取（storeFile 相对于 android/app/ 解析）；
-// 属性缺失时回退 debug 签名，保证无该文件的环境仍可构建 release。
+// 本地 key.properties 或 CI 环境变量提供签名；release 禁止回退 debug 签名。
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("key.properties")
     if (file.exists()) {
         file.inputStream().use { load(it) }
+    }
+}
+
+fun signingValue(property: String, environment: String): String? =
+    System.getenv(environment)?.takeIf { it.isNotBlank() }
+        ?: (keystoreProperties[property] as String?)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "HAN_MUSIC_STORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "HAN_MUSIC_STORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "HAN_MUSIC_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "HAN_MUSIC_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword,
+).all { it != null }
+
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.project == project && it.name.contains("Release") }) {
+        check(hasReleaseSigning) {
+            "Release signing is required. Configure android/key.properties or HAN_MUSIC_* signing environment variables."
+        }
+        check(file(releaseStoreFile!!).isFile) { "Release keystore file does not exist." }
     }
 }
 
@@ -43,21 +63,16 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+            storeFile = releaseStoreFile?.let { file(it) }
+            storePassword = releaseStorePassword
         }
     }
 
     buildTypes {
         release {
-            // 已配置签名信息时用 release 密钥，否则回退 debug 密钥
-            signingConfig = if (keystoreProperties["storeFile"] != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

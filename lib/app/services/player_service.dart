@@ -11,6 +11,7 @@ import 'package:han_music/app/data/models/song.dart';
 import 'package:han_music/app/core/utils/lyrics.dart';
 import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/play_queue_manager.dart';
+import 'package:han_music/app/services/playback_history_tracker.dart';
 import 'package:han_music/app/services/settings_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -26,8 +27,10 @@ class PlayerService extends GetxService {
     this._settings, {
     Future<String> Function(Song song)? urlResolver,
     LyricsResolver? lyricsResolver,
-  })  : _urlResolver = urlResolver,
-        _lyricsResolver = lyricsResolver;
+    AudioPlayer Function()? playerFactory,
+  }) : _urlResolver = urlResolver,
+       _lyricsResolver = lyricsResolver,
+       _playerFactory = playerFactory ?? AudioPlayer.new;
 
   final KeyValueStore _store;
   final SettingsService _settings;
@@ -37,6 +40,7 @@ class PlayerService extends GetxService {
 
   /// 歌词解析器（由 LyricsService 提供：缓存→内嵌→网络源→AI 链路）。
   final LyricsResolver? _lyricsResolver;
+  final AudioPlayer Function() _playerFactory;
 
   late final AudioPlayer _player;
   final _subscriptions = <StreamSubscription<dynamic>>[];
@@ -79,17 +83,20 @@ class PlayerService extends GetxService {
   /// 自动切歌。与 TimerService 保持单向依赖，避免服务互相引用。
   bool Function()? stopAfterCurrentHook;
 
-  /// 播放提交钩子（由历史服务注入）：进入播放态 ≥ 10s 视为实际播放，
+  /// 播放提交钩子（由历史服务注入）：累计实际播放 ≥ 10s，
   /// 记入历史。单向依赖，与 stopAfterCurrentHook 同一模式。
   void Function(Song song)? playbackCommitted;
 
-  Timer? _commitTimer;
+  late final _historyTracker = PlaybackHistoryTracker(
+    delay: AppConstants.historyCommitDelay,
+    onCommit: (song) => playbackCommitted?.call(song),
+  );
 
   /// 连续失败计数：一轮队列内全部失败则停止自动跳过，避免死循环。
   int _consecutiveFailures = 0;
 
   Future<void> init() async {
-    _player = AudioPlayer();
+    _player = _playerFactory();
 
     try {
       final session = await AudioSession.instance;
@@ -119,8 +126,12 @@ class PlayerService extends GetxService {
 
   void _onPlayerState(PlayerState state) {
     playing.value = state.playing;
-    buffering.value = state.processingState == ProcessingState.loading ||
+    buffering.value =
+        state.processingState == ProcessingState.loading ||
         state.processingState == ProcessingState.buffering;
+    _historyTracker.update(
+      active: state.playing && state.processingState == ProcessingState.ready,
+    );
     if (state.processingState == ProcessingState.completed) {
       unawaited(_handleCompleted());
     }
@@ -183,6 +194,8 @@ class PlayerService extends GetxService {
 
   Future<void> _loadAndPlay(Song song, {Duration? startAt}) async {
     final seq = ++_loadSeq;
+    _historyTracker.reset();
+    ++_lyricsSeq;
     lyrics.value = null; // 切歌即清旧歌词，避免展示上一首内容
     try {
       final playable = await _ensurePlayable(song);
@@ -196,11 +209,16 @@ class PlayerService extends GetxService {
       if (seq != _loadSeq) return;
       _loadedSongId = playable.id;
       _consecutiveFailures = 0;
+      _historyTracker.reset(playable);
+      _historyTracker.update(
+        active:
+            _player.playing && _player.processingState == ProcessingState.ready,
+      );
       unawaited(_loadLyrics(playable));
       await _player.play();
-      _scheduleHistoryCommit(seq, playable);
     } on AppException catch (e) {
       if (seq != _loadSeq) return;
+      _historyTracker.reset();
       buffering.value = false;
       _consecutiveFailures++;
       final skipped = await _skipOnFailure();
@@ -210,21 +228,12 @@ class PlayerService extends GetxService {
       if (seq != _loadSeq) return;
       // 被更新的装载打断属于正常切换，不计入播放失败
       if (e is PlayerInterruptedException) return;
+      _historyTracker.reset();
       buffering.value = false;
       _consecutiveFailures++;
       final skipped = await _skipOnFailure();
       if (!skipped) _reportError('无法播放「${song.title}」', e);
     }
-  }
-
-  /// 连续播放 10s 才记入历史；期间切歌/装载则取消。
-  void _scheduleHistoryCommit(int seq, Song song) {
-    _commitTimer?.cancel();
-    _commitTimer = Timer(AppConstants.historyCommitDelay, () {
-      if (seq == _loadSeq && current.value?.id == song.id) {
-        playbackCommitted?.call(song);
-      }
-    });
   }
 
   /// 装载当前歌曲歌词（链路在 LyricsService）；失败静默降级占位。
@@ -288,8 +297,7 @@ class PlayerService extends GetxService {
     final cover = song.coverUrl;
     Uri? artUri;
     if (cover != null && cover.isNotEmpty) {
-      artUri =
-          cover.startsWith('http') ? Uri.tryParse(cover) : Uri.file(cover);
+      artUri = cover.startsWith('http') ? Uri.tryParse(cover) : Uri.file(cover);
     }
     return MediaItem(
       id: song.id,
@@ -362,6 +370,9 @@ class PlayerService extends GetxService {
       lengthBefore: queue.length + 1,
     );
     if (next == null) {
+      ++_loadSeq;
+      ++_lyricsSeq;
+      _historyTracker.reset();
       await pause();
       currentIndex.value = -1;
       current.value = null;
@@ -373,10 +384,13 @@ class PlayerService extends GetxService {
     currentIndex.value = next;
     current.value = queue[next];
     if (wasCurrent) {
+      _resumePosition = Duration.zero;
+      await _persistQueue();
       await _persistState();
       await _loadAndPlay(queue[next]);
     } else {
       await _persistQueue();
+      await _persistState();
     }
   }
 
@@ -395,6 +409,7 @@ class PlayerService extends GetxService {
     );
     current.value = queue[currentIndex.value.clamp(0, queue.length - 1)];
     await _persistQueue();
+    await _persistState();
   }
 
   Future<void> setPlayMode(PlayMode mode) async {
@@ -428,7 +443,9 @@ class PlayerService extends GetxService {
         (m) => m.name == stateJson['mode'],
         orElse: () => PlayMode.sequential,
       );
-      volume.value = ((stateJson['volume'] as num?) ?? 1.0).clamp(0.0, 1.0).toDouble();
+      volume.value = ((stateJson['volume'] as num?) ?? 1.0)
+          .clamp(0.0, 1.0)
+          .toDouble();
       // 恢复的音量要真正应用到播放器，而不仅是 UI 状态
       await _player.setVolume(volume.value);
 
@@ -441,8 +458,9 @@ class PlayerService extends GetxService {
       if (index >= 0 && index < queue.length) {
         currentIndex.value = index;
         current.value = queue[index];
-        _resumePosition =
-            Duration(milliseconds: stateJson['positionMs'] as int? ?? 0);
+        _resumePosition = Duration(
+          milliseconds: stateJson['positionMs'] as int? ?? 0,
+        );
         duration.value = queue[index].duration ?? Duration.zero;
         // 音源未装载：首次点播时从记忆进度开始
         _loadedSongId = null;
@@ -483,7 +501,7 @@ class PlayerService extends GetxService {
 
   @override
   void onClose() {
-    _commitTimer?.cancel();
+    _historyTracker.dispose();
     for (final sub in _subscriptions) {
       sub.cancel();
     }
