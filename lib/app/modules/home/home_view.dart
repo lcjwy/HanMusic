@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:han_music/app/core/theme/app_theme.dart';
 import 'package:han_music/app/modules/home/home_controller.dart';
 import 'package:han_music/app/modules/library/library_view.dart';
 import 'package:han_music/app/modules/online/online_view.dart';
@@ -23,23 +24,40 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<HomeController>();
-    final content = Column(
-      children: [
-        Expanded(
-          child: Obx(
-            () => IndexedStack(
-              index: controller.tabIndex.value,
-              children: const [
-                LibraryView(),
-                PlaylistView(),
-                OnlineView(),
-                SettingsView(),
-              ],
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // 内容区极淡对角流彩：紫入青出，列表页保持简洁只做氛围
+    final content = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: isDark ? 0.10 : 0.07),
+            Colors.transparent,
+            AppTheme.accentCyan.withValues(alpha: isDark ? 0.08 : 0.05),
+          ],
+          stops: const [0, 0.45, 1],
+        ),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Obx(
+              () => IndexedStack(
+                index: controller.tabIndex.value,
+                children: const [
+                  LibraryView(),
+                  PlaylistView(),
+                  OnlineView(),
+                  SettingsView(),
+                ],
+              ),
             ),
           ),
-        ),
-        const MiniPlayerBar(),
-      ],
+          const MiniPlayerBar(),
+        ],
+      ),
     );
     final wide = MediaQuery.sizeOf(context).width >= _widthThreshold;
 
@@ -52,6 +70,29 @@ class HomeView extends StatelessWidget {
                     selectedIndex: controller.tabIndex.value,
                     onDestinationSelected: controller.switchTo,
                     labelType: NavigationRailLabelType.all,
+                    leading: Padding(
+                      padding: const EdgeInsets.only(top: 16, bottom: 8),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppTheme.seedColor,
+                              AppTheme.accentPink,
+                            ],
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.music_note,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                     destinations: [
                       for (final (icon, selectedIcon, label) in _destinations)
                         NavigationRailDestination(

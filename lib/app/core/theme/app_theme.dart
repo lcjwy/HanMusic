@@ -8,6 +8,13 @@ import 'package:han_music/app/data/models/app_settings.dart';
 abstract final class AppTheme {
   static const seedColor = Color(0xFF7C5CFC);
 
+  /// 炫彩辅助色：渐变进度条、极光背景、导航高亮共用。
+  static const accentPink = Color(0xFFF06292);
+  static const accentCyan = Color(0xFF26C6DA);
+
+  /// 渐变进度条统一配色（紫→浅紫→粉）。
+  static const progressGradient = [seedColor, Color(0xFFB388FF), accentPink];
+
   /// 暗色模式表面色：深灰紫调，替代 M3 默认的近黑背景。
   static const _darkSurface = Color(0xFF1C1A24);
 
@@ -29,6 +36,14 @@ abstract final class AppTheme {
       scaffoldBackgroundColor:
           isDark ? _darkSurface : null,
       visualDensity: VisualDensity.adaptivePlatformDensity,
+      // 水花飞溅式按压缩放，配合整体年轻化观感
+      splashFactory: InkSparkle.splashFactory,
+      navigationBarTheme: NavigationBarThemeData(
+        indicatorColor: tuned.primary.withValues(alpha: 0.14),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        indicatorColor: tuned.primary.withValues(alpha: 0.14),
+      ),
     );
   }
 }

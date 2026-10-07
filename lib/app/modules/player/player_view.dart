@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:han_music/app/core/theme/app_theme.dart';
 import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/utils/lyrics.dart';
+import 'package:han_music/app/core/widgets/aurora_background.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
+import 'package:han_music/app/core/widgets/gradient_slider_track.dart';
 import 'package:han_music/app/data/models/play_mode.dart';
 import 'package:han_music/app/data/models/song.dart';
 import 'package:han_music/app/modules/player/player_controller.dart';
@@ -14,7 +18,7 @@ import 'package:han_music/app/services/player_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
 import 'package:han_music/app/services/timer_service.dart';
 
-/// 播放页：封面、进度、播放控制、播放模式、音量、定时入口。
+/// 播放页：极光背景、封面、进度、播放控制、播放模式、音量、定时入口。
 class PlayerView extends StatelessWidget {
   const PlayerView({super.key});
 
@@ -22,9 +26,14 @@ class PlayerView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<PlayerController>();
     final player = controller.player;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      // 背景延伸到透明 AppBar 之后，形成沉浸式顶部
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: const Text('正在播放'),
         actions: [
           Obx(
@@ -59,92 +68,104 @@ class PlayerView extends StatelessWidget {
       ),
       body: Obx(() {
         final song = player.current.value;
-        if (song == null) {
-          return const EmptyPlaceholder(
-            icon: Icons.music_off,
-            title: '当前没有播放任务',
-          );
-        }
-        final theme = Theme.of(context);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Obx(
-                    () => AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      child: PlayerController.showLyrics.value
-                          ? _LyricsView(
-                              key: const ValueKey('lyrics'),
-                              player: player,
-                            )
-                          : _AlbumDisc(
-                              key: ValueKey('album-${song.id}'),
-                              url: song.coverUrl,
-                              playing: player.playing.value,
-                            ),
-                    ),
+        final content = song == null
+            ? const EmptyPlaceholder(
+                icon: Icons.music_off,
+                title: '当前没有播放任务',
+              ) as Widget
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Obx(
+                          () => AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            child: PlayerController.showLyrics.value
+                                ? _LyricsView(
+                                    key: const ValueKey('lyrics'),
+                                    player: player,
+                                  )
+                                : _AlbumDisc(
+                                    key: ValueKey('album-${song.id}'),
+                                    url: song.coverUrl,
+                                    playing: player.playing.value,
+                                  ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        song.title,
+                        style: theme.textTheme.titleLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${song.artist} · ${song.album}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 12),
+                      _Seekbar(player: player),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _PlayModeButton(controller: controller),
+                          IconButton(
+                            tooltip: '上一曲',
+                            iconSize: 36,
+                            onPressed: controller.previous,
+                            icon: const Icon(Icons.skip_previous),
+                          ),
+                          _PlayPauseButton(controller: controller),
+                          IconButton(
+                            tooltip: '下一曲',
+                            iconSize: 36,
+                            onPressed: controller.next,
+                            icon: const Icon(Icons.skip_next),
+                          ),
+                          Obx(() {
+                            final timer = Get.find<TimerService>();
+                            final timerActive = timer.active;
+                            return IconButton(
+                              tooltip: '睡眠定时',
+                              icon: Icon(
+                                timerActive
+                                    ? Icons.timer
+                                    : Icons.timer_outlined,
+                                color: timerActive
+                                    ? theme.colorScheme.primary
+                                    : null,
+                              ),
+                              onPressed: () => showSleepTimerSheet(context),
+                            );
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _VolumeSlider(controller: controller),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  song.title,
-                  style: theme.textTheme.titleLarge,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${song.artist} · ${song.album}',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: theme.colorScheme.outline),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                _Seekbar(player: player),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _PlayModeButton(controller: controller),
-                    IconButton(
-                      tooltip: '上一曲',
-                      iconSize: 36,
-                      onPressed: controller.previous,
-                      icon: const Icon(Icons.skip_previous),
-                    ),
-                    _PlayPauseButton(controller: controller),
-                    IconButton(
-                      tooltip: '下一曲',
-                      iconSize: 36,
-                      onPressed: controller.next,
-                      icon: const Icon(Icons.skip_next),
-                    ),
-                    Obx(() {
-                      final timer = Get.find<TimerService>();
-                      final timerActive = timer.active;
-                      return IconButton(
-                        tooltip: '睡眠定时',
-                        icon: Icon(
-                          timerActive ? Icons.timer : Icons.timer_outlined,
-                          color: timerActive
-                              ? theme.colorScheme.primary
-                              : null,
-                        ),
-                        onPressed: () => showSleepTimerSheet(context),
-                      );
-                    }),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _VolumeSlider(controller: controller),
-              ],
-            ),
-          ),
+              );
+        // 极光背景铺满整页（含透明 AppBar 区域），前景内容浮于其上
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const AuroraBackground(),
+            content,
+          ],
         );
       }),
     );
@@ -203,19 +224,30 @@ class _SeekbarState extends State<_Seekbar> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           Expanded(
-            child: Slider(
-              value: value,
-              max: maxMs > 0 ? maxMs.toDouble() : 1,
-              onChanged: maxMs <= 0
-                  ? null
-                  : (v) => setState(() => _dragValueMs = v),
-              onChangeEnd: maxMs <= 0
-                  ? null
-                  : (v) {
-                      widget.player
-                          .seek(Duration(milliseconds: v.toInt()));
-                      setState(() => _dragValueMs = null);
-                    },
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 5,
+                trackShape: const GradientSliderTrackShape(),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 15),
+                thumbColor: Colors.white,
+                inactiveTrackColor:
+                    Theme.of(context).colorScheme.outline.withValues(alpha: 0.25),
+              ),
+              child: Slider(
+                value: value,
+                max: maxMs > 0 ? maxMs.toDouble() : 1,
+                onChanged: maxMs <= 0
+                    ? null
+                    : (v) => setState(() => _dragValueMs = v),
+                onChangeEnd: maxMs <= 0
+                    ? null
+                    : (v) {
+                        widget.player
+                            .seek(Duration(milliseconds: v.toInt()));
+                        setState(() => _dragValueMs = null);
+                      },
+              ),
             ),
           ),
           Text(
@@ -270,22 +302,39 @@ class _AlbumDiscState extends State<_AlbumDisc>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: RotationTransition(
-        turns: _rotation,
-        child: Container(
-          width: 260,
-          height: 260,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: theme.colorScheme.surfaceContainerHighest,
-            boxShadow: [
-              BoxShadow(
-                color: theme.colorScheme.shadow.withValues(alpha: 0.25),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+      child: AnimatedBuilder(
+        animation: _rotation,
+        builder: (context, child) {
+          // 播放中随旋转相位呼吸的彩色辉光；暂停定格为静息亮度
+          final pulse = widget.playing
+              ? 0.5 + 0.5 * math.sin(_rotation.value * 2 * math.pi)
+              : 0.25;
+          return Container(
+            width: 260,
+            height: 260,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.surfaceContainerHighest,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary
+                      .withValues(alpha: 0.16 + 0.16 * pulse),
+                  blurRadius: 36 + 20 * pulse,
+                  spreadRadius: 2 + 2 * pulse,
+                ),
+                BoxShadow(
+                  color: AppTheme.accentPink
+                      .withValues(alpha: 0.10 + 0.12 * pulse),
+                  blurRadius: 44 + 24 * pulse,
+                  spreadRadius: 1 + 2 * pulse,
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: RotationTransition(
+          turns: _rotation,
           child: Center(
             child: ClipOval(
               child: SizedBox(
@@ -562,7 +611,13 @@ class _VolumeSlider extends StatelessWidget {
           ),
           Expanded(
             child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(trackHeight: 2),
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                trackShape: const GradientSliderTrackShape(),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                overlayShape:
+                    const RoundSliderOverlayShape(overlayRadius: 13),
+              ),
               child: Slider(
                 value: controller.player.volume.value,
                 onChanged: controller.setVolume,

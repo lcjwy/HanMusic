@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/core/constants/app_constants.dart';
+import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/data/models/app_settings.dart';
 import 'package:han_music/app/modules/library/bili_import_dialog.dart';
+import 'package:han_music/app/modules/player/widgets/sleep_timer_sheet.dart';
 import 'package:han_music/app/modules/settings/ai_config_dialog.dart';
 import 'package:han_music/app/modules/settings/settings_controller.dart';
 import 'package:han_music/app/modules/settings/source_config_dialog.dart';
@@ -12,6 +14,7 @@ import 'package:han_music/app/services/library_service.dart';
 import 'package:han_music/app/services/lyrics_service.dart';
 import 'package:han_music/app/services/playlist_service.dart';
 import 'package:han_music/app/services/settings_service.dart';
+import 'package:han_music/app/services/timer_service.dart';
 
 /// 设置页：外观 / 网络源 / 数据管理 / 关于。
 class SettingsView extends StatelessWidget {
@@ -61,6 +64,32 @@ class SettingsView extends StatelessWidget {
             value: settings.autoSkipOnFail.value,
             onChanged: controller.setAutoSkipOnFail,
           ),
+        ),
+        // 定时功能全局入口：与播放页底部的时钟按钮共用同一面板
+        Obx(
+          () {
+            final timer = Get.find<TimerService>();
+            final active = timer.active;
+            final subtitle = switch ((
+              timer.stopAfterCurrent.value,
+              timer.remaining.value,
+            )) {
+              (true, _) => '播完当前歌曲后停止',
+              (_, final Duration left) => '剩余 ${formatDuration(left)}',
+              _ => '到点自动暂停播放（也可在播放页设置）',
+            };
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                active ? Icons.timer : Icons.timer_outlined,
+                color: active ? Theme.of(context).colorScheme.primary : null,
+              ),
+              title: const Text('睡眠定时'),
+              subtitle: Text(subtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showSleepTimerSheet(context),
+            );
+          },
         ),
         const _SectionHeader('网络源'),
         Obx(
