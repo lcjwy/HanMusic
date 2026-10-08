@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:han_music/app/core/constants/app_routes.dart';
 import 'package:han_music/app/core/utils/formatters.dart';
 import 'package:han_music/app/core/widgets/confirm_dialog.dart';
 import 'package:han_music/app/core/widgets/cover_art.dart';
 import 'package:han_music/app/core/widgets/empty_placeholder.dart';
-import 'package:han_music/app/modules/library/bili_import_dialog.dart';
 import 'package:han_music/app/modules/library/library_controller.dart';
 import 'package:han_music/app/modules/playlist/widgets/add_to_playlist_sheet.dart';
 import 'package:han_music/app/services/library_import_service.dart';
 import 'package:han_music/app/services/library_service.dart';
 
-/// 本地音乐库页：搜索 + 排序 + 虚拟化列表 + 导入 + 多选删除。
+/// 本地音乐库页：极简搜索栏 + 列表头排序 + 虚拟化列表 + 多选删除。
 class LibraryView extends StatelessWidget {
   const LibraryView({super.key});
 
@@ -25,12 +23,11 @@ class LibraryView extends StatelessWidget {
         Obx(() {
           return controller.selecting
               ? _SelectionBar(controller: controller)
-              : _Toolbar(controller: controller);
+              : _SearchBar(controller: controller);
         }),
         const _ImportProgress(),
         Expanded(
           child: Obx(() {
-            final songs = controller.visibleSongs();
             if (library.songs.isEmpty) {
               return EmptyPlaceholder(
                 icon: Icons.library_music,
@@ -40,50 +37,62 @@ class LibraryView extends StatelessWidget {
                 onAction: controller.importFiles,
               );
             }
+            final songs = controller.visibleSongs();
             if (songs.isEmpty) {
               return const EmptyPlaceholder(
                 icon: Icons.search_off,
                 title: '没有匹配的歌曲',
               );
             }
-            return ListView.builder(
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return Obx(() {
-                  final checked = controller.selected.contains(song);
-                  return ListTile(
-                    leading: controller.selecting
-                        ? Checkbox(
-                            value: checked,
-                            onChanged: (_) => controller.toggleSelected(song),
-                          )
-                        : CoverArt(url: song.coverUrl, size: 44, iconSize: 20),
-                    title: Text(
-                      song.missing ? '${song.title}（文件缺失）' : song.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: song.missing
-                          ? TextStyle(color: Theme.of(context).disabledColor)
-                          : null,
-                    ),
-                    subtitle: Text(
-                      '${song.artist} - ${song.album}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Text(
-                      formatDuration(song.duration),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    selected: checked,
-                    onTap: () => controller.selecting
-                        ? controller.toggleSelected(song)
-                        : controller.playVisible(index),
-                    onLongPress: () => controller.toggleSelected(song),
-                  );
-                });
-              },
+            return Column(
+              children: [
+                _ListHeader(controller: controller, count: songs.length),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: songs.length,
+                    itemBuilder: (context, index) {
+                      final song = songs[index];
+                      return Obx(() {
+                        final checked = controller.selected.contains(song);
+                        return ListTile(
+                          leading: controller.selecting
+                              ? Checkbox(
+                                  value: checked,
+                                  onChanged: (_) =>
+                                      controller.toggleSelected(song),
+                                )
+                              : CoverArt(
+                                  url: song.coverUrl, size: 44, iconSize: 20),
+                          title: Text(
+                            song.missing
+                                ? '${song.title}（文件缺失）'
+                                : song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: song.missing
+                                ? TextStyle(color: Theme.of(context).disabledColor)
+                                : null,
+                          ),
+                          subtitle: Text(
+                            '${song.artist} - ${song.album}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Text(
+                            formatDuration(song.duration),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          selected: checked,
+                          onTap: () => controller.selecting
+                              ? controller.toggleSelected(song)
+                              : controller.playVisible(index),
+                          onLongPress: () => controller.toggleSelected(song),
+                        );
+                      });
+                    },
+                  ),
+                ),
+              ],
             );
           }),
         ),
@@ -92,56 +101,77 @@ class LibraryView extends StatelessWidget {
   }
 }
 
-class _Toolbar extends StatelessWidget {
-  const _Toolbar({required this.controller});
+/// 顶部搜索栏：仅保留搜索框，功能入口统一收进主页。
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.controller});
 
   final LibraryController controller;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: TextField(
+        onChanged: (value) => controller.query.value = value,
+        decoration: const InputDecoration(
+          hintText: '搜索标题 / 歌手 / 专辑',
+          prefixIcon: Icon(Icons.search),
+          isDense: true,
+          border: OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+}
+
+/// 列表头：歌曲计数 + 排序方式选择（仅列表非空时展示）。
+class _ListHeader extends StatelessWidget {
+  const _ListHeader({required this.controller, required this.count});
+
+  final LibraryController controller;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
       child: Row(
         children: [
-          Expanded(
-            child: TextField(
-              onChanged: (value) => controller.query.value = value,
-              decoration: const InputDecoration(
-                hintText: '搜索标题 / 歌手 / 专辑',
-                prefixIcon: Icon(Icons.search),
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-            ),
+          Text(
+            '共 $count 首',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.outline),
           ),
+          const Spacer(),
           PopupMenuButton<LibrarySort>(
-            icon: const Icon(Icons.sort),
-            tooltip: '排序',
+            tooltip: '排序方式',
             onSelected: (value) => controller.sortBy.value = value,
             itemBuilder: (_) => [
               for (final sort in LibrarySort.values)
-                PopupMenuItem(value: sort, child: Text(sort.label)),
+                CheckedPopupMenuItem(
+                  value: sort,
+                  checked: controller.sortBy.value == sort,
+                  child: Text(sort.label),
+                ),
             ],
-          ),
-          IconButton(
-            tooltip: '最近播放',
-            icon: const Icon(Icons.history),
-            onPressed: () => Get.toNamed(AppRoutes.history),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.playlist_add),
-            tooltip: '导入音乐',
-            onSelected: (value) => switch (value) {
-              'files' => controller.importFiles(),
-              'folder' => controller.importFolder(),
-              'bili' => showBiliImportDialog(context),
-              _ => {},
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'files', child: Text('导入文件')),
-              PopupMenuItem(value: 'folder', child: Text('导入文件夹')),
-              PopupMenuItem(value: 'bili', child: Text('导入 B站缓存')),
-            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.sort,
+                      size: 18, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Obx(
+                    () => Text(
+                      controller.sortBy.value.label,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:han_music/app/core/widgets/empty_placeholder.dart';
 import 'package:han_music/app/core/widgets/playlist_cover.dart';
 import 'package:han_music/app/data/models/playlist.dart';
 import 'package:han_music/app/modules/playlist/playlist_controller.dart';
 import 'package:han_music/app/services/playlist_service.dart';
 
-/// 歌单页：封面网格（含「新建歌单」入口），点击进入详情。
+/// 歌单页：封面网格（含「新建歌单」入口），点击进入详情；空态居中引导创建。
 class PlaylistView extends StatelessWidget {
   const PlaylistView({super.key});
 
@@ -16,6 +17,15 @@ class PlaylistView extends StatelessWidget {
 
     return Obx(() {
       final playlists = service.playlists.toList();
+      if (playlists.isEmpty) {
+        return EmptyPlaceholder(
+          icon: Icons.queue_music,
+          title: '还没有歌单',
+          subtitle: '创建歌单，把喜欢的歌归类整理',
+          actionLabel: '新建歌单',
+          onAction: () => controller.createPlaylist(context),
+        );
+      }
       return GridView.builder(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(

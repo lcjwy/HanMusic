@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:han_music/app/modules/dashboard/dashboard_controller.dart';
 import 'package:han_music/app/modules/home/home_controller.dart';
 import 'package:han_music/app/modules/library/library_controller.dart';
 import 'package:han_music/app/modules/online/online_controller.dart';
@@ -11,6 +12,7 @@ class HomeBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<HomeController>(HomeController.new, fenix: true);
+    Get.lazyPut<DashboardController>(DashboardController.new, fenix: true);
     Get.lazyPut<LibraryController>(LibraryController.new, fenix: true);
     Get.lazyPut<PlaylistController>(PlaylistController.new, fenix: true);
     Get.lazyPut<OnlineController>(OnlineController.new, fenix: true);

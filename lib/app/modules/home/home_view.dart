@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:han_music/app/core/theme/app_theme.dart';
+import 'package:han_music/app/modules/dashboard/dashboard_view.dart';
 import 'package:han_music/app/modules/home/home_controller.dart';
 import 'package:han_music/app/modules/library/library_view.dart';
 import 'package:han_music/app/modules/online/online_view.dart';
@@ -15,6 +16,7 @@ class HomeView extends StatelessWidget {
   static const _widthThreshold = 900.0;
 
   static const _destinations = [
+    (Icons.home_outlined, Icons.home, '主页'),
     (Icons.library_music_outlined, Icons.library_music, '本地音乐'),
     (Icons.queue_music_outlined, Icons.queue_music, '歌单'),
     (Icons.cloud_off_outlined, Icons.cloud_outlined, '在线音乐'),
@@ -47,6 +49,7 @@ class HomeView extends StatelessWidget {
               () => IndexedStack(
                 index: controller.tabIndex.value,
                 children: const [
+                  DashboardView(),
                   LibraryView(),
                   PlaylistView(),
                   OnlineView(),
